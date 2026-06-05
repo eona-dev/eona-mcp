@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "product": "eona-cli",
+  "version": "0.1.0",
+  "artifacts": {
+    "macos_arm64": {
+      "path": "releases/0.1.0/eona-cli-macos-arm64-0.1.0.tar.gz",
+      "sha256": "PINNED_BY_RELEASE_WORKFLOW"
+    }
+  }
+}

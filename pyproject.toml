@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eona-mcp"
+version = "0.1.0"
+description = "EONA MCP product"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "AGPL-3.0-or-later"}
+dependencies = []
+
+[project.scripts]
+eona-mcp = "eona_mcp.server:main"
+eona-mcp-http = "eona_mcp.http_server:main"
+eona-session = "eona_mcp.session_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

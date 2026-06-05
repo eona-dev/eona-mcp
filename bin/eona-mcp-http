@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export EONA_MCP_INSTALL_ROOT="${EONA_MCP_INSTALL_ROOT:-${ROOT_DIR}}"
+export EONA_MCP_WORKSPACE="${EONA_MCP_WORKSPACE:-${EONA_MCP_INSTALL_ROOT}/workspace}"
+export EONA_CLI="${EONA_CLI:-${EONA_MCP_INSTALL_ROOT}/deps/eona-cli/bin/eona}"
+export PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
+exec python3 -m eona_mcp.http_server "$@"
