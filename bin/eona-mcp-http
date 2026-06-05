@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -f "${ROOT_DIR}/eona-mcp.env" ]]; then
+  # shellcheck source=/dev/null
+  source "${ROOT_DIR}/eona-mcp.env"
+fi
 export EONA_RELEASE_ROOT="${EONA_RELEASE_ROOT:-${ROOT_DIR}}"
 export EONA_FAMILY_ROOT="${EONA_FAMILY_ROOT:-${HOME}/.eona}"
 export EONA_MCP_INSTALL_ROOT="${EONA_MCP_INSTALL_ROOT:-${ROOT_DIR}}"
