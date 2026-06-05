@@ -40,8 +40,9 @@ def load_config(env: Mapping[str, str] | None = None) -> EonaMcpConfig:
     project_id = _required_project_id(values.get("EONA_PROJECT_ID", "default"))
     session_id = _required_project_id(values.get("EONA_SESSION_ID") or project_id)
     sources = _parse_sources(values.get("EONA_SOURCES_JSON"))
-    install_root = Path(values.get("EONA_MCP_INSTALL_ROOT") or Path.home() / ".eona" / "eona-mcp").expanduser().resolve()
-    workspace = Path(values.get("EONA_MCP_WORKSPACE") or install_root / "workspace").expanduser().resolve()
+    family_root = Path(values.get("EONA_FAMILY_ROOT") or Path.home() / ".eona").expanduser().resolve()
+    workspace = Path(values.get("EONA_MCP_WORKSPACE") or family_root / "workspace").expanduser().resolve()
+    cli_root = Path(values.get("EONA_CLI_INSTALL_ROOT") or family_root / "eona-cli").expanduser().resolve()
     return EonaMcpConfig(
         project_id=project_id,
         session_id=session_id,
@@ -49,7 +50,7 @@ def load_config(env: Mapping[str, str] | None = None) -> EonaMcpConfig:
         sources=sources,
         project_description=_optional_text(values.get("EONA_PROJECT_DESCRIPTION")),
         source_roots=_parse_source_roots(values.get("EONA_SOURCE_ROOTS_JSON"), sources=sources),
-        eona_executable=str(values.get("EONA_CLI") or (install_root / "deps" / "eona-cli" / "bin" / "eona")),
+        eona_executable=str(values.get("EONA_CLI") or (cli_root / "bin" / "eona")),
         startup_add=_parse_bool(values.get("EONA_STARTUP_ADD", "1")),
         startup_required=_parse_bool(values.get("EONA_STARTUP_REQUIRED", "1")),
         project_tools_enabled=True,

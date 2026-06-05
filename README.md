@@ -10,4 +10,10 @@ Tools:
 - `eona.<project>.refresh`
 - `eona.<project>.query`
 
-The default CLI install root is `~/.eona/eona-mcp`; workspace/session data remains under `~/.eona/eona-mcp/workspace`.
+EONA installs as a product family under `~/.eona` by default:
+
+- `~/.eona/eona-mcp`: MCP surface and launchers
+- `~/.eona/eona-cli`: sealed CLI runtime
+- `~/.eona/workspace`: shared local workspace/session data
+
+Set `EONA_FAMILY_ROOT`, `EONA_MCP_INSTALL_ROOT`, `EONA_CLI_INSTALL_ROOT`, `EONA_CLI`, or `EONA_MCP_WORKSPACE` to override these defaults.

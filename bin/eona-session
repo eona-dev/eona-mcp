@@ -2,7 +2,8 @@
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export EONA_RELEASE_ROOT="${EONA_RELEASE_ROOT:-${ROOT_DIR}}"
+export EONA_FAMILY_ROOT="${EONA_FAMILY_ROOT:-${HOME}/.eona}"
 export EONA_MCP_INSTALL_ROOT="${EONA_MCP_INSTALL_ROOT:-${ROOT_DIR}}"
-export EONA_MCP_WORKSPACE="${EONA_MCP_WORKSPACE:-${EONA_MCP_INSTALL_ROOT}/workspace}"
-export EONA_CLI="${EONA_CLI:-${EONA_MCP_INSTALL_ROOT}/deps/eona-cli/bin/eona}"
+export EONA_MCP_WORKSPACE="${EONA_MCP_WORKSPACE:-${EONA_FAMILY_ROOT}/workspace}"
+export EONA_CLI="${EONA_CLI:-${EONA_FAMILY_ROOT}/eona-cli/bin/eona}"
 exec python3 -m eona_mcp.session_cli "$@"
