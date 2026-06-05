@@ -25,6 +25,8 @@ Options:
   --cli-version VERSION    Pass a specific CLI version to the CLI bootstrap.
   --cli-artifact-url URL   Pass a CLI artifact base URL to the CLI bootstrap.
   --repair-cli             Run the CLI bootstrap even when bin/eona already exists.
+  --allow-cli-downgrade    Allow repair to replace a newer local CLI with the
+                           requested bootstrap version.
   --skip-cli               Install only the MCP surface.
   -h, --help               Show this help.
 EOF
@@ -34,6 +36,26 @@ shell_quote() {
   local quoted
   printf -v quoted '%q' "$1"
   printf '%s\n' "$quoted"
+}
+
+json_field() {
+  local json_path="$1"
+  local field="$2"
+  perl -MJSON::PP - "$json_path" "$field" <<'PERL'
+my ($path, $field) = @ARGV;
+open my $fh, '<', $path or exit 1;
+my $raw = do { local $/; <$fh> };
+close $fh;
+my $payload = eval { JSON::PP::decode_json($raw) } or exit 1;
+my @parts = split /\./, $field;
+my $value = $payload;
+for my $part (@parts) {
+    exit 1 unless ref($value) eq 'HASH' && exists $value->{$part};
+    $value = $value->{$part};
+}
+exit 1 if ref($value) || !defined($value);
+print $value;
+PERL
 }
 
 copy_path() {
@@ -103,16 +125,81 @@ provision_cli() {
   curl -sSL "$cli_bootstrap_url" | sh -s -- "${args[@]}"
 }
 
+cli_version() {
+  local executable="$1"
+  "$executable" --version 2>/dev/null | awk '{print $NF}' | head -n 1
+}
+
+version_gt() {
+  local left="$1"
+  local right="$2"
+  [[ -n "$left" && -n "$right" ]] || return 1
+  awk -v left="$left" -v right="$right" '
+    function normalize(value) {
+      sub(/^[^0-9]*/, "", value)
+      sub(/[^0-9.].*$/, "", value)
+      return value
+    }
+    BEGIN {
+      left = normalize(left)
+      right = normalize(right)
+      split(left, l, ".")
+      split(right, r, ".")
+      for (i = 1; i <= 4; i++) {
+        lv = (l[i] == "" ? 0 : l[i]) + 0
+        rv = (r[i] == "" ? 0 : r[i]) + 0
+        if (lv > rv) exit 0
+        if (lv < rv) exit 1
+      }
+      exit 1
+    }
+  '
+}
+
+version_lt() {
+  local left="$1"
+  local right="$2"
+  version_gt "$right" "$left"
+}
+
+guard_cli_repair_version() {
+  local executable="$1"
+  local target_version="$2"
+  local allow_downgrade="$3"
+  [[ -x "$executable" ]] || return 0
+  [[ "$allow_downgrade" -eq 0 ]] || return 0
+
+  local current_version
+  current_version="$(cli_version "$executable")"
+  if version_gt "$current_version" "$target_version"; then
+    fail "refusing to replace newer eona-cli ${current_version} with bootstrap target ${target_version}; pass --allow-cli-downgrade to override"
+  fi
+}
+
+cli_needs_upgrade() {
+  local executable="$1"
+  local min_version="$2"
+  [[ -x "$executable" ]] || return 0
+
+  local current_version
+  current_version="$(cli_version "$executable")"
+  [[ -n "$current_version" ]] || return 0
+  version_lt "$current_version" "$min_version"
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+CLI_DEPENDENCY_CONTRACT="${SOURCE_ROOT}/contracts/eona-cli-dependency.json"
+DEFAULT_CLI_BOOTSTRAP_VERSION="$(json_field "$CLI_DEPENDENCY_CONTRACT" compatibility.min_version)" || fail "dependency contract missing compatibility.min_version"
 FAMILY_ROOT="${EONA_FAMILY_ROOT:-${HOME}/.eona}"
 MCP_INSTALL_DIR="${EONA_MCP_INSTALL_ROOT:-}"
 CLI_INSTALL_DIR="${EONA_CLI_INSTALL_ROOT:-}"
 WORKSPACE_DIR="${EONA_MCP_WORKSPACE:-}"
 CLI_BOOTSTRAP_URL="${EONA_CLI_BOOTSTRAP_URL:-https://cli.eona.dev/bootstrap.sh}"
-CLI_VERSION="${EONA_CLI_BOOTSTRAP_VERSION:-}"
+CLI_VERSION="${EONA_CLI_BOOTSTRAP_VERSION:-$DEFAULT_CLI_BOOTSTRAP_VERSION}"
 CLI_ARTIFACT_URL="${EONA_CLI_ARTIFACT_URL:-}"
 REPAIR_CLI=0
+ALLOW_CLI_DOWNGRADE=0
 SKIP_CLI=0
 
 while [[ $# -gt 0 ]]; do
@@ -156,6 +243,10 @@ while [[ $# -gt 0 ]]; do
       REPAIR_CLI=1
       shift
       ;;
+    --allow-cli-downgrade)
+      ALLOW_CLI_DOWNGRADE=1
+      shift
+      ;;
     --skip-cli)
       SKIP_CLI=1
       shift
@@ -186,12 +277,15 @@ install_mcp_surface "$SOURCE_ROOT" "$MCP_INSTALL_DIR"
 MCP_INSTALL_DIR="$(cd "$MCP_INSTALL_DIR" && pwd -P)"
 write_env_file "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR"
 
+CLI_EXECUTABLE="${CLI_INSTALL_DIR%/}/bin/eona"
+
 if [[ "$SKIP_CLI" -eq 1 ]]; then
   log "Skipped eona-cli provisioning"
-elif [[ -x "${CLI_INSTALL_DIR%/}/bin/eona" && "$REPAIR_CLI" -ne 1 ]]; then
-  log "Using existing eona-cli at ${CLI_INSTALL_DIR%/}/bin/eona"
+elif [[ -x "$CLI_EXECUTABLE" && "$REPAIR_CLI" -ne 1 ]] && ! cli_needs_upgrade "$CLI_EXECUTABLE" "$DEFAULT_CLI_BOOTSTRAP_VERSION"; then
+  log "Using existing eona-cli at ${CLI_EXECUTABLE}"
 else
   log "Provisioning eona-cli into ${CLI_INSTALL_DIR}"
+  guard_cli_repair_version "$CLI_EXECUTABLE" "$CLI_VERSION" "$ALLOW_CLI_DOWNGRADE"
   provision_cli "$CLI_INSTALL_DIR" "$CLI_BOOTSTRAP_URL" "$CLI_VERSION" "$CLI_ARTIFACT_URL"
 fi
 
