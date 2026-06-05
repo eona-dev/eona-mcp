@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "product": "eona-cli",
+  "purpose": "bootstrap_install",
+  "version": "0.1.0",
+  "artifacts": {
+    "macos_arm64": {
+      "path": "releases/0.1.0/eona-cli-macos-arm64-0.1.0.tar.gz",
+      "sha256": "PINNED_BY_RELEASE_WORKFLOW"
+    }
+  },
+  "notes": [
+    "Use this only when installing or repairing a missing eona-cli sibling runtime.",
+    "Runtime startup should use eona-cli-dependency.json for compatibility checks because eona-cli may upgrade itself."
+  ]
+}

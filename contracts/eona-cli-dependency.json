@@ -1,11 +1,21 @@
 {
   "schema_version": 1,
   "product": "eona-cli",
-  "version": "0.1.0",
-  "artifacts": {
-    "macos_arm64": {
-      "path": "releases/0.1.0/eona-cli-macos-arm64-0.1.0.tar.gz",
-      "sha256": "PINNED_BY_RELEASE_WORKFLOW"
-    }
-  }
+  "purpose": "runtime_compatibility",
+  "compatibility": {
+    "min_version": "0.1.0",
+    "query_version": 1,
+    "required_commands": [
+      "add",
+      "query",
+      "session sources",
+      "session reset",
+      "session refresh",
+      "status"
+    ]
+  },
+  "notes": [
+    "eona-cli may self-upgrade as a sibling runtime under the EONA family root.",
+    "eona-mcp should validate runtime compatibility instead of enforcing a fixed artifact hash at startup."
+  ]
 }
