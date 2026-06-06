@@ -229,7 +229,11 @@ prepare_mcp_project() {
   source_roots_json="$9"
 
   command -v python3 >/dev/null 2>&1 || fail "python3 is required to prepare the MCP project"
-  log "Preparing MCP project ${project_id}/${session_id}"
+  if should_prepare_sources "$sources_json"; then
+    log "Preparing MCP project ${project_id}/${session_id}"
+  else
+    log "Inspecting MCP project ${project_id}/${session_id}"
+  fi
   EONA_FAMILY_ROOT="$family_root" \
   EONA_MCP_INSTALL_ROOT="$install_dir" \
   EONA_CLI_INSTALL_ROOT="$cli_install_dir" \
@@ -517,13 +521,13 @@ print_install_section "$MCP_INSTALL_DIR" "$CLI_EXECUTABLE" "${MCP_INSTALL_DIR}/e
 if should_prepare_sources "$SOURCES_JSON"; then
   prepare_mcp_project "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION" "$SOURCE_ROOTS_JSON"
 else
-  log "No bootstrap sources configured for ${PROJECT_ID}/${SESSION_ID}"
+  prepare_mcp_project "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION" "$SOURCE_ROOTS_JSON"
 fi
 
 log "Installed EONA MCP to ${MCP_INSTALL_DIR}"
 log "Workspace: ${WORKSPACE_DIR}"
 log "Project: ${PROJECT_ID}/${SESSION_ID}"
-log "Run: ${MCP_INSTALL_DIR}/bin/eona-mcp"
+log "MCP command: ${MCP_INSTALL_DIR}/bin/eona-mcp"
 log "Stdio launcher: ${MCP_INSTALL_DIR}/eona-mcp-stdio.sh"
 printf '\n%sbootstrap succeeded%s\n' "$(human_color 32)" "$(human_color 0)" >&2
 printf 'For more details about EONA MCP, please read README.md.\n' >&2

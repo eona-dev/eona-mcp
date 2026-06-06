@@ -470,12 +470,15 @@ def _log(payload: dict[str, object]) -> None:
 
     skip_reason = str(payload.get("skip_reason") or "").strip()
     retained_roots = [root for root in all_roots if root not in prepared_paths]
+    if skip_reason == "no_sources_configured":
+        print("no bootstrap source input; skipping source preparation", file=sys.stderr, flush=True)
     if retained_roots:
         if prepared_paths:
             print("", file=sys.stderr, flush=True)
         for root in retained_roots:
             print(f"{cyan}{_display_path(root)}{reset}", file=sys.stderr, flush=True)
         print(f"{len(retained_roots)} existing sources retained", file=sys.stderr, flush=True)
+        print("", file=sys.stderr, flush=True)
     elif not prepared_paths and skip_reason != "no_sources_configured":
         print("none", file=sys.stderr, flush=True)
 
