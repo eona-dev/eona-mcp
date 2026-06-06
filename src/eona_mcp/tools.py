@@ -59,57 +59,7 @@ class EonaMcpTools:
             {"name": f"{prefix}.list", "description": "List source roots in this MCP project session.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
             {"name": f"{prefix}.reset", "description": "Reset this MCP project session without deleting source photos.", "inputSchema": {"type": "object", "required": ["confirm"], "properties": {"confirm": {"type": "boolean"}}, "additionalProperties": False}},
             {"name": f"{prefix}.refresh", "description": "Refresh all source roots in this MCP project session. Use only when the user explicitly asks to rescan/update existing photo metadata.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
-            {
-                "name": f"{prefix}.query",
-                "description": (
-                    "Query metadata and Cadis-enriched photo memory for this MCP project session. "
-                    "Before complex queries, read resource eona://agent/how-to-query. "
-                    "The plan must be Eona Query v1: include query_version=1, "
-                    "anchor={\"entity\":\"photo\"}, select, and optional filters/sort_by/limit. "
-                    "Supported fields include photo.id/content_id, path.text, time.taken_at/year/month/day, "
-                    "location.country/admin_label/admin_path, camera.make/model, and camera_detail lens/settings. "
-                    "Use aggregation inside select/sort_by items, for example "
-                    "{\"entity\":\"photo\",\"attribute\":\"id\",\"aggregation\":\"count\"}. "
-                    "Do not request filename, filepath, raw GPS, trips, albums, or SQL. "
-                    "Do not write SQL."
-                ),
-                "inputSchema": {
-                    "type": "object",
-                    "required": ["plan"],
-                    "properties": {
-                        "plan": {
-                            "type": "object",
-                            "description": (
-                                "Eona Query v1 plan. Example: "
-                                "{\"query_version\":1,\"anchor\":{\"entity\":\"photo\"},"
-                                "\"select\":[{\"entity\":\"time\",\"attribute\":\"taken_at\"},"
-                                "{\"entity\":\"location\",\"attribute\":\"admin_path\"}],"
-                                "\"filters\":[{\"entity\":\"location\",\"attribute\":\"admin_path\","
-                                "\"operator\":\"contains\",\"value\":\"Rotterdam\"}],"
-                                "\"sort_by\":[{\"entity\":\"time\",\"attribute\":\"taken_at\","
-                                "\"order\":\"desc\"}],\"limit\":10}"
-                            ),
-                            "required": ["query_version", "anchor", "select"],
-                            "properties": {
-                                "query_version": {"type": "integer", "const": 1},
-                                "anchor": {
-                                    "type": "object",
-                                    "required": ["entity"],
-                                    "properties": {"entity": {"type": "string"}},
-                                },
-                                "select": {"type": "array", "items": {"type": "object"}},
-                                "filters": {"type": "array", "items": {"type": "object"}},
-                                "group_by": {"type": "array", "items": {"type": "object"}},
-                                "sort_by": {"type": "array", "items": {"type": "object"}},
-                                "limit": {"type": ["integer", "null"]},
-                            },
-                            "additionalProperties": True,
-                        },
-                        "in_sources": {"type": "array", "items": {"type": "string"}},
-                    },
-                    "additionalProperties": False,
-                },
-            },
+            {"name": f"{prefix}.query", "description": "Query metadata and Cadis-enriched photo memory for this MCP project session.", "inputSchema": {"type": "object", "required": ["plan"], "properties": {"plan": {"type": "object"}, "in_sources": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": False}},
         ]
 
     def call_tool(self, name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
