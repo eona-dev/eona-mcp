@@ -57,6 +57,49 @@ curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
 
 ---
 
+## Docker HTTP MCP
+
+Use Docker when you want HTTP MCP containers instead of the local stdio launcher.
+
+Prepare local environment settings:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set at least:
+
+```text
+EONA_PROJECT_A_PHOTOS=/path/to/photos
+EONA_PROJECT_A_BEARER_TOKEN=change-me-project-a
+```
+
+Start the default project:
+
+```bash
+docker compose up
+```
+
+The default HTTP endpoint is:
+
+```text
+http://localhost:8711/mcp
+```
+
+To run the optional second project, set the `EONA_PROJECT_B_*` values in `.env`
+and start with:
+
+```bash
+docker compose --profile project-b up
+```
+
+Docker MCP containers are standalone and ephemeral. They do not share a
+workspace volume; each container stores its index under its own `/workspace`.
+Removing a container removes its indexed data. Photo folders are mounted
+read-only at `/photos`.
+
+---
+
 ## MCP Tools
 
 A project named:
