@@ -10,6 +10,12 @@ Tools:
 - `eona.<project>.refresh`
 - `eona.<project>.query`
 
+Install from a hosted bootstrap:
+
+```bash
+curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
+```
+
 Install from a checkout or release bundle:
 
 ```bash
