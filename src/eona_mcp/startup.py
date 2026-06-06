@@ -18,7 +18,6 @@ def run_startup_add(config: EonaMcpConfig, runner: EonaCliRunner | None = None) 
     try:
         result = resolved_runner.add(
             sources=config.sources,
-            source_roots=config.source_roots,
             refresh=False,
             stream_stderr=True,
         )
@@ -42,7 +41,6 @@ def run_startup_add(config: EonaMcpConfig, runner: EonaCliRunner | None = None) 
             "project_id": config.project_id,
             "session_id": config.session_id,
             "sources": list(config.sources),
-            "source_roots": list(config.source_roots),
             "result": result,
         }
     )

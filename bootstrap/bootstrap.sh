@@ -54,7 +54,6 @@ Options:
   --project-id ID          MCP project id. Defaults to EONA_PROJECT_ID or my-photos.
   --session-id ID          MCP session id. Defaults to EONA_SESSION_ID or default_session.
   --sources-json JSON      Source paths JSON array. Defaults to EONA_SOURCES_JSON or [].
-  --source-roots-json JSON Source root metadata JSON. Defaults to EONA_SOURCE_ROOTS_JSON.
   --project-description TEXT
                            Optional MCP project description.
   --source-root DIR        Install MCP files from this source root instead of
@@ -179,7 +178,6 @@ write_env_file() {
   session_id="$6"
   sources_json="$7"
   project_description="$8"
-  source_roots_json="$9"
   env_file="${install_dir}/eona-mcp.env"
 
   cat >"$env_file" <<EOF
@@ -197,9 +195,6 @@ if [ -z "\${EONA_SOURCES_JSON:-}" ]; then export EONA_SOURCES_JSON=$(shell_quote
 EOF
   if [ -n "$project_description" ]; then
     printf 'if [ -z "${EONA_PROJECT_DESCRIPTION:-}" ]; then export EONA_PROJECT_DESCRIPTION=%s; fi\n' "$(shell_quote "$project_description")" >>"$env_file"
-  fi
-  if [ -n "$source_roots_json" ]; then
-    printf 'if [ -z "${EONA_SOURCE_ROOTS_JSON:-}" ]; then export EONA_SOURCE_ROOTS_JSON=%s; fi\n' "$(shell_quote "$source_roots_json")" >>"$env_file"
   fi
 }
 
@@ -224,7 +219,6 @@ prepare_mcp_project() {
   session_id="$6"
   sources_json="$7"
   project_description="$8"
-  source_roots_json="$9"
 
   command -v python3 >/dev/null 2>&1 || fail "python3 is required to prepare the MCP project"
   if should_prepare_sources "$sources_json"; then
@@ -241,7 +235,6 @@ prepare_mcp_project() {
   EONA_SESSION_ID="$session_id" \
   EONA_SOURCES_JSON="$sources_json" \
   EONA_PROJECT_DESCRIPTION="$project_description" \
-  EONA_SOURCE_ROOTS_JSON="$source_roots_json" \
   PYTHONPATH="${install_dir}/src${PYTHONPATH:+:$PYTHONPATH}" \
   python3 -m eona_mcp.start_project --prepare-only --marker-dir "${workspace_dir}/.eona-mcp-prepare"
 }
@@ -361,7 +354,6 @@ PROJECT_ID="${EONA_PROJECT_ID:-my-photos}"
 SESSION_ID="${EONA_SESSION_ID:-default_session}"
 SOURCES_JSON="${EONA_SOURCES_JSON:-[]}"
 PROJECT_DESCRIPTION="${EONA_PROJECT_DESCRIPTION:-}"
-SOURCE_ROOTS_JSON="${EONA_SOURCE_ROOTS_JSON:-}"
 REPAIR_CLI=0
 ALLOW_CLI_DOWNGRADE=0
 SKIP_CLI=0
@@ -401,11 +393,6 @@ while [ $# -gt 0 ]; do
     --sources-json)
       [ $# -ge 2 ] || fail "missing value for --sources-json"
       SOURCES_JSON="$2"
-      shift 2
-      ;;
-    --source-roots-json)
-      [ $# -ge 2 ] || fail "missing value for --source-roots-json"
-      SOURCE_ROOTS_JSON="$2"
       shift 2
       ;;
     --project-description)
@@ -501,7 +488,7 @@ mkdir -p "$(dirname "$MCP_INSTALL_DIR")" "$(dirname "$CLI_INSTALL_DIR")"
 
 install_mcp_surface "$SOURCE_ROOT" "$MCP_INSTALL_DIR"
 MCP_INSTALL_DIR="$(cd "$MCP_INSTALL_DIR" && pwd -P)"
-write_env_file "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION" "$SOURCE_ROOTS_JSON"
+write_env_file "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION"
 write_stdio_launcher "$MCP_INSTALL_DIR"
 
 CLI_EXECUTABLE="${CLI_INSTALL_DIR%/}/bin/eona"
@@ -519,9 +506,9 @@ fi
 print_install_section "$MCP_INSTALL_DIR" "$CLI_EXECUTABLE" "${MCP_INSTALL_DIR}/eona-mcp-stdio.sh"
 
 if should_prepare_sources "$SOURCES_JSON"; then
-  prepare_mcp_project "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION" "$SOURCE_ROOTS_JSON"
+  prepare_mcp_project "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION"
 else
-  prepare_mcp_project "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION" "$SOURCE_ROOTS_JSON"
+  prepare_mcp_project "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION"
 fi
 
 log "Installed EONA MCP to ${MCP_INSTALL_DIR}"

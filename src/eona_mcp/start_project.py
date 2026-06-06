@@ -21,7 +21,6 @@ PROJECT_ENV_KEYS = (
     "EONA_SESSION_ID",
     "EONA_PROJECT_DESCRIPTION",
     "EONA_SOURCES_JSON",
-    "EONA_SOURCE_ROOTS_JSON",
 )
 
 
@@ -73,7 +72,6 @@ def resolve_project_env(*, stdin: TextIO, stderr: TextIO) -> dict[str, str]:
     session_id = os.environ.get("EONA_SESSION_ID", "").strip() or DEFAULT_SESSION_ID
     description = os.environ.get("EONA_PROJECT_DESCRIPTION", "").strip()
     sources_json = os.environ.get("EONA_SOURCES_JSON", "").strip()
-    source_roots_json = os.environ.get("EONA_SOURCE_ROOTS_JSON", "").strip()
 
     if not sources_json:
         if not stdin.isatty():
@@ -99,8 +97,6 @@ def resolve_project_env(*, stdin: TextIO, stderr: TextIO) -> dict[str, str]:
     }
     if description:
         project_env["EONA_PROJECT_DESCRIPTION"] = description
-    if source_roots_json:
-        project_env["EONA_SOURCE_ROOTS_JSON"] = source_roots_json
 
     # Validate before writing the env file.
     load_config(project_env)
@@ -156,9 +152,9 @@ def prepare_project(
     force_append = _parse_bool(os.environ.get("EONA_FORCE_APPEND", "0"))
     _log_prepare_environment(config)
     if not config.sources:
-        current_source_roots = _existing_session_source_roots(runner)
+        current_sources = _existing_session_sources(runner)
         hint = ""
-        if not current_source_roots:
+        if not current_sources:
             hint = "No source folders are attached.\nUse the MCP tools to append folders before running queries."
         payload: dict[str, object] = {
             "ok": True,
@@ -168,15 +164,14 @@ def prepare_project(
             "project_id": config.project_id,
             "session_id": config.session_id,
             "sources": [],
-            "source_roots": [],
             "summary": "Skipped source preparation because EONA_SOURCES_JSON was not provided. Runtime/bootstrap setup only.",
             "hint": hint,
         }
-        payload["current_source_roots"] = current_source_roots
+        payload["current_sources"] = current_sources
         _log(payload)
         return payload
     if marker is not None and marker.is_file() and not force_append:
-        current_source_roots = _existing_session_source_roots(runner)
+        current_sources = _existing_session_sources(runner)
         payload: dict[str, object] = {
             "ok": True,
             "operation": "mcp_prepare",
@@ -185,23 +180,22 @@ def prepare_project(
             "project_id": config.project_id,
             "session_id": config.session_id,
             "sources": list(config.sources),
-            "source_roots": list(config.source_roots),
-            "requested_source_roots": list(config.source_roots or config.sources),
+            "requested_sources": list(config.sources),
             "summary": "Skipped project preparation; successful marker already exists.",
             "hint": "Set EONA_FORCE_APPEND=1 to force bootstrap to append/refresh these sources, or use the MCP append/refresh tools after bootstrap.",
             "marker": str(marker),
         }
-        payload["current_source_roots"] = current_source_roots
+        payload["current_sources"] = current_sources
         _log(payload)
         return payload
-    confirmation = _confirm_existing_source_roots(
+    confirmation = _confirm_existing_sources(
         config=config,
         runner=runner,
         stdin=stdin or sys.stdin,
         stderr=stderr or sys.stderr,
     )
     if isinstance(confirmation, dict):
-        confirmation["current_source_roots"] = list(confirmation.get("existing_source_roots") or [])
+        confirmation["current_sources"] = list(confirmation.get("existing_sources") or [])
         marker = _prepare_skip_marker_path(config, install_root=install_root)
         if marker is not None:
             _write_prepare_marker(marker, confirmation)
@@ -211,7 +205,6 @@ def prepare_project(
     try:
         result = runner.add(
             sources=config.sources,
-            source_roots=config.source_roots,
             refresh=True,
             stream_stderr=True,
         )
@@ -230,10 +223,9 @@ def prepare_project(
         "project_id": config.project_id,
         "session_id": config.session_id,
         "sources": list(config.sources),
-        "source_roots": list(config.source_roots),
         **_prepare_summary(result),
     }
-    payload["project_source_roots"] = _existing_session_source_roots(runner)
+    payload["project_sources"] = _existing_session_sources(runner)
     if marker is not None:
         _write_prepare_marker(
             marker,
@@ -242,7 +234,6 @@ def prepare_project(
                 "project_id": config.project_id,
                 "session_id": config.session_id,
                 "sources": list(config.sources),
-                "source_roots": list(config.source_roots),
             },
         )
         payload["marker"] = str(marker)
@@ -250,23 +241,23 @@ def prepare_project(
     return payload
 
 
-def _confirm_existing_source_roots(
+def _confirm_existing_sources(
     *,
     config,
     runner: EonaCliRunner,
     stdin: TextIO,
     stderr: TextIO,
 ) -> dict[str, object] | None:
-    existing_roots = _existing_session_source_roots(runner)
-    if not existing_roots:
+    existing_sources = _existing_session_sources(runner)
+    if not existing_sources:
         return None
-    requested_roots = list(config.source_roots or config.sources)
+    requested_sources = list(config.sources)
     if _parse_bool(os.environ.get("EONA_FORCE_APPEND", "0")) or _parse_bool(os.environ.get("EONA_MCP_CONFIRM_APPEND", "0")):
         return None
 
     skip_reason = "existing_session_sources"
     summary = (
-        "Skipped source preparation because the existing project session already has source roots. "
+        "Skipped source preparation because the existing project session already has sources. "
         "Bootstrap does not append or refresh sources in an existing project session by default."
     )
     return {
@@ -277,15 +268,14 @@ def _confirm_existing_source_roots(
         "project_id": config.project_id,
         "session_id": config.session_id,
         "sources": list(config.sources),
-        "source_roots": list(config.source_roots),
-        "existing_source_roots": existing_roots,
-        "requested_source_roots": requested_roots,
+        "existing_sources": existing_sources,
+        "requested_sources": requested_sources,
         "summary": summary,
         "hint": "Set EONA_FORCE_APPEND=1 to force bootstrap to append/refresh these sources, or use the MCP append/refresh tools after bootstrap.",
     }
 
 
-def _existing_session_source_roots(runner: EonaCliRunner) -> list[str]:
+def _existing_session_sources(runner: EonaCliRunner) -> list[str]:
     try:
         payload = runner.list_session_sources()
     except (FileNotFoundError, EonaCliInvocationError):
@@ -354,7 +344,6 @@ def _prepare_marker_path(config, *, marker_dir: Path | None) -> Path | None:
         {
             "session_id": config.session_id,
             "sources": list(config.sources),
-            "source_roots": list(config.source_roots),
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -451,37 +440,37 @@ def _log(payload: dict[str, object]) -> None:
             status_suffix = f" {green}completed{reset}" if source_status else ""
             print(f"{file_count} files indexed{status_suffix}", file=sys.stderr, flush=True)
 
-    existing_roots = payload.get("existing_source_roots")
-    requested_roots = payload.get("requested_source_roots")
-    project_source_roots = payload.get("project_source_roots")
-    current_source_roots = payload.get("current_source_roots")
-    if isinstance(project_source_roots, list):
-        all_roots = [str(root).strip() for root in project_source_roots if str(root).strip()]
-    elif isinstance(current_source_roots, list):
-        all_roots = [str(root).strip() for root in current_source_roots if str(root).strip()]
-    elif isinstance(existing_roots, list):
-        all_roots = [str(root).strip() for root in existing_roots if str(root).strip()]
+    existing_sources = payload.get("existing_sources")
+    requested_sources = payload.get("requested_sources")
+    project_sources = payload.get("project_sources")
+    current_sources = payload.get("current_sources")
+    if isinstance(project_sources, list):
+        all_sources = [str(root).strip() for root in project_sources if str(root).strip()]
+    elif isinstance(current_sources, list):
+        all_sources = [str(root).strip() for root in current_sources if str(root).strip()]
+    elif isinstance(existing_sources, list):
+        all_sources = [str(root).strip() for root in existing_sources if str(root).strip()]
     else:
-        all_roots = []
+        all_sources = []
 
     skip_reason = str(payload.get("skip_reason") or "").strip()
-    retained_roots = [root for root in all_roots if root not in prepared_paths]
+    retained_sources = [root for root in all_sources if root not in prepared_paths]
     if skip_reason == "no_sources_configured":
         print("no bootstrap source input; skipping source preparation", file=sys.stderr, flush=True)
-    if retained_roots:
+    if retained_sources:
         if prepared_paths:
             print("", file=sys.stderr, flush=True)
-        for root in retained_roots:
+        for root in retained_sources:
             print(f"{cyan}{_display_path(root)}{reset}", file=sys.stderr, flush=True)
-        print(f"{len(all_roots)} total sources attached", file=sys.stderr, flush=True)
+        print(f"{len(all_sources)} total sources attached", file=sys.stderr, flush=True)
         print("", file=sys.stderr, flush=True)
     elif not prepared_paths and skip_reason != "no_sources_configured":
         print("none", file=sys.stderr, flush=True)
 
     if skip_reason in {"existing_session_sources", "successful_prepare_marker"}:
         requested_blocked: list[str] = []
-        if isinstance(requested_roots, list):
-            requested_blocked = [str(item).strip() for item in requested_roots if str(item).strip()]
+        if isinstance(requested_sources, list):
+            requested_blocked = [str(item).strip() for item in requested_sources if str(item).strip()]
         if requested_blocked:
             print("requested sources were not appended:", file=sys.stderr, flush=True)
             for root in requested_blocked:

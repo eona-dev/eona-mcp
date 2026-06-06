@@ -37,11 +37,6 @@ class EonaMcpTools:
                             "items": {"type": "string"},
                             "description": "Local photo folder paths to attach to the project session.",
                         },
-                        "source_roots": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "Optional source root labels; must match sources one-to-one.",
-                        },
                         "refresh": {
                             "type": "boolean",
                             "default": False,
@@ -73,10 +68,7 @@ class EonaMcpTools:
                 sources = _string_list(args.get("sources"))
                 if not sources:
                     return _tool_error("`sources` must include at least one source path.")
-                source_roots = _string_list(args.get("source_roots"))
-                if source_roots and len(source_roots) != len(sources):
-                    return _tool_error("`source_roots` must have one entry for each source.")
-                return _tool_result(self.runner.add(sources=sources, source_roots=source_roots, refresh=bool(args.get("refresh", False)), stream_stderr=True))
+                return _tool_result(self.runner.add(sources=sources, refresh=bool(args.get("refresh", False)), stream_stderr=True))
             if name == f"{prefix}.list":
                 return _tool_result(self.runner.list_session_sources())
             if name == f"{prefix}.reset":

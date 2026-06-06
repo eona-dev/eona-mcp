@@ -28,20 +28,13 @@ class EonaCliRunner:
         self,
         *,
         sources: list[str] | tuple[str, ...] | None = None,
-        source_roots: list[str] | tuple[str, ...] | None = None,
         refresh: bool = False,
         stream_stderr: bool = False,
     ) -> dict[str, Any]:
         command = self._base_command("add")
         resolved_sources = _source_args(self.config.sources if sources is None else sources)
-        resolved_source_roots = _source_args(self.config.source_roots if source_roots is None else source_roots)
         for source in resolved_sources:
             command.extend(["--source", source])
-        if resolved_source_roots:
-            if len(resolved_source_roots) != len(resolved_sources):
-                raise ValueError("source_roots must have one entry for each source.")
-            for source_root in resolved_source_roots:
-                command.extend(["--source-root", source_root])
         if refresh:
             command.append("--refresh")
         return self._run_json(command, stream_stderr=stream_stderr)

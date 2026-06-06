@@ -23,7 +23,6 @@ class EonaMcpConfig:
     workspace: Path | None
     sources: tuple[str, ...]
     project_description: str | None = None
-    source_roots: tuple[str, ...] = ()
     eona_executable: str = "eona"
     startup_add: bool = True
     startup_required: bool = True
@@ -49,7 +48,6 @@ def load_config(env: Mapping[str, str] | None = None) -> EonaMcpConfig:
         workspace=workspace,
         sources=sources,
         project_description=_optional_text(values.get("EONA_PROJECT_DESCRIPTION")),
-        source_roots=_parse_source_roots(values.get("EONA_SOURCE_ROOTS_JSON"), sources=sources),
         eona_executable=str(values.get("EONA_CLI") or (cli_root / "bin" / "eona")),
         startup_add=_parse_bool(values.get("EONA_STARTUP_ADD", "1")),
         startup_required=_parse_bool(values.get("EONA_STARTUP_REQUIRED", "1")),
@@ -83,23 +81,6 @@ def _parse_sources(raw_value: str | None) -> tuple[str, ...]:
         raise EonaMcpConfigError("EONA_SOURCES_JSON must be a JSON array of source paths.")
     sources = tuple(str(item).strip() for item in payload if str(item).strip())
     return sources
-
-
-def _parse_source_roots(raw_value: str | None, *, sources: tuple[str, ...]) -> tuple[str, ...]:
-    if raw_value is None or not str(raw_value).strip():
-        return ()
-    try:
-        payload = json.loads(raw_value)
-    except json.JSONDecodeError as exc:
-        raise EonaMcpConfigError("EONA_SOURCE_ROOTS_JSON must be a JSON array or object.") from exc
-    if isinstance(payload, list):
-        roots = tuple(str(item).strip() for item in payload if str(item).strip())
-        if len(roots) != len(sources):
-            raise EonaMcpConfigError("EONA_SOURCE_ROOTS_JSON array must have one entry for each EONA_SOURCES_JSON path.")
-        return roots
-    if isinstance(payload, dict):
-        return tuple(str(payload.get(source, source)).strip() or source for source in sources)
-    raise EonaMcpConfigError("EONA_SOURCE_ROOTS_JSON must be a JSON array or object.")
 
 
 def _parse_bool(value: str) -> bool:
