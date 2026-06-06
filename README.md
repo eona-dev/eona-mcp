@@ -86,3 +86,13 @@ eona://agent/how-to-query
 before issuing queries.
 
 ---
+
+## eona-cli
+
+`eona-cli` is the local EONA runtime used by `eona-mcp` to index photo folders, maintain project sessions, and execute EONA Query v1 plans.
+
+Repository:
+
+```text
+https://github.com/isemptyc/eona-cli
+```
