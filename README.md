@@ -60,6 +60,9 @@ curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
 ## Docker HTTP MCP
 
 Use Docker when you want HTTP MCP containers instead of the local stdio launcher.
+The Docker image runs EONA MCP and EONA CLI in an isolated, prebuilt
+environment: no random runtime downloads, no auto-upgrades, and a preserved
+running environment for the lifetime of the container.
 
 Prepare local environment settings:
 
