@@ -34,4 +34,6 @@ Set `EONA_FAMILY_ROOT`, `EONA_MCP_INSTALL_ROOT`, `EONA_CLI_INSTALL_ROOT`, `EONA_
 
 EONA MCP is project-scoped. Bootstrap writes project defaults into `~/.eona/eona-mcp/eona-mcp.env`, using `EONA_PROJECT_ID=my-photos`, `EONA_SESSION_ID=default_session`, and `EONA_SOURCES_JSON=[]` unless overridden. Pass `--project-id`, `--session-id`, `--sources-json`, `--source-roots-json`, or `--project-description` to configure the project during install; when sources are provided, bootstrap prepares the default session before the MCP server is added to Codex, Claude, or another agent.
 
+For stdio MCP client entries, bootstrap also writes `~/.eona/eona-mcp/eona-mcp-stdio.sh`, which delegates to `~/.eona/eona-mcp/bin/eona-mcp`.
+
 `contracts/eona-cli-dependency.json` describes the runtime compatibility surface that MCP expects from `eona-cli`. Bootstrap artifact pins live separately in `contracts/eona-cli-bootstrap.json`, because `eona-cli` may upgrade itself after installation.

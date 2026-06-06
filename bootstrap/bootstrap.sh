@@ -171,6 +171,18 @@ EOF
   fi
 }
 
+write_stdio_launcher() {
+  install_dir="$1"
+  launcher_path="${install_dir}/eona-mcp-stdio.sh"
+
+  cat >"$launcher_path" <<EOF
+#!/bin/sh
+set -eu
+exec $(shell_quote "${install_dir%/}/bin/eona-mcp") "\$@"
+EOF
+  chmod +x "$launcher_path"
+}
+
 prepare_mcp_project() {
   install_dir="$1"
   family_root="$2"
@@ -429,6 +441,7 @@ mkdir -p "$(dirname "$MCP_INSTALL_DIR")" "$(dirname "$CLI_INSTALL_DIR")"
 install_mcp_surface "$SOURCE_ROOT" "$MCP_INSTALL_DIR"
 MCP_INSTALL_DIR="$(cd "$MCP_INSTALL_DIR" && pwd -P)"
 write_env_file "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION" "$SOURCE_ROOTS_JSON"
+write_stdio_launcher "$MCP_INSTALL_DIR"
 
 CLI_EXECUTABLE="${CLI_INSTALL_DIR%/}/bin/eona"
 
@@ -452,3 +465,4 @@ log "Installed EONA MCP to ${MCP_INSTALL_DIR}"
 log "Workspace: ${WORKSPACE_DIR}"
 log "Project: ${PROJECT_ID}/${SESSION_ID}"
 log "Run: ${MCP_INSTALL_DIR}/bin/eona-mcp"
+log "Stdio launcher: ${MCP_INSTALL_DIR}/eona-mcp-stdio.sh"
