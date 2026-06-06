@@ -1,41 +1,88 @@
 # eona-mcp
 
-AGPL MCP product extracted from EONA. It exposes the EONA MCP surface and calls the sibling sealed `eona-cli` runtime by explicit path.
+```text
+Expose local EONA photo metadata to Codex, Claude, and other MCP clients.
+```
 
-Tools:
+EONA MCP is a project-scoped MCP server built on top of EONA CLI.
 
-- `eona.<project>.append`
-- `eona.<project>.list`
-- `eona.<project>.reset`
-- `eona.<project>.refresh`
-- `eona.<project>.query`
+Each project provides its own photo workspace, metadata index, and MCP tool namespace.
 
-Install from a hosted bootstrap:
+---
+
+## Install
 
 ```bash
 curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
 ```
 
-Install from a checkout or release bundle:
+When bootstrap succeeds, configure your MCP client to use:
 
-```bash
-./bootstrap/bootstrap.sh
+```text
+~/.eona/eona-mcp/eona-mcp-stdio.sh
 ```
 
-EONA installs as a product family under `~/.eona` by default:
+---
 
-- `~/.eona/eona-mcp`: MCP surface and launchers
-- `~/.eona/eona-cli`: sealed CLI runtime
-- `~/.eona/workspace`: shared local workspace/session data
+## Quick Start
 
-The MCP bootstrap installs the MCP surface and provisions `eona-cli` as a sibling runtime when `~/.eona/eona-cli/bin/eona` is missing or older than `contracts/eona-cli-dependency.json` requires. It leaves compatible or newer CLI runtimes in place so `eona-cli` can self-upgrade independently; use `--repair-cli` to run the CLI bootstrap anyway. Repair refuses to replace a newer local CLI with the bootstrap target unless `--allow-cli-downgrade` is set.
+Attach photo folders during bootstrap:
 
-Set `EONA_FAMILY_ROOT`, `EONA_MCP_INSTALL_ROOT`, `EONA_CLI_INSTALL_ROOT`, `EONA_CLI`, or `EONA_MCP_WORKSPACE` to override runtime defaults. Bootstrap also supports `--family-root`, `--install-dir`, `--cli-install-dir`, and `--workspace-dir`.
+```bash
+export EONA_SOURCES_JSON='["/path/to/photos"]'
 
-EONA MCP is project-scoped. Bootstrap writes project defaults into `~/.eona/eona-mcp/eona-mcp.env`, using `EONA_PROJECT_ID=my-photos`, `EONA_SESSION_ID=default_session`, and `EONA_SOURCES_JSON=[]` unless overridden. Pass `--project-id`, `--session-id`, `--sources-json`, `--source-roots-json`, or `--project-description` to configure the project during install; when sources are provided, bootstrap prepares the default session before the MCP server is added to Codex, Claude, or another agent.
+curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
+```
 
-For stdio MCP client entries, bootstrap also writes `~/.eona/eona-mcp/eona-mcp-stdio.sh`, which delegates to `~/.eona/eona-mcp/bin/eona-mcp`.
+The default project is:
 
-Bootstrap prints the same human-readable onboarding sections whether it runs from a checkout or a hosted archive: `[DOWNLOAD]`, `[INSTALL]`, `[PROJECT SOURCES]` when sources are configured, and a final `bootstrap succeeded` line. Use the printed `launcher` path as the stdio MCP command in Codex, Claude, or another MCP client.
+```text
+my-photos
+```
 
-`contracts/eona-cli-dependency.json` describes the runtime compatibility surface that MCP expects from `eona-cli`. Bootstrap artifact pins live separately in `contracts/eona-cli-bootstrap.json`, because `eona-cli` may upgrade itself after installation.
+---
+
+## Existing Projects
+
+Bootstrap does not modify existing project sources by default.
+
+To intentionally append or refresh sources:
+
+```bash
+export EONA_SOURCES_JSON='["/path/to/photos"]'
+export EONA_FORCE_APPEND=1
+
+curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
+```
+
+---
+
+## MCP Tools
+
+A project named:
+
+```text
+my-photos
+```
+
+exposes:
+
+```text
+eona.my-photos.append
+eona.my-photos.list
+eona.my-photos.refresh
+eona.my-photos.reset
+eona.my-photos.query
+```
+
+The query tool executes an EONA Query v1 plan against the project's metadata index.
+
+Agents should read:
+
+```text
+eona://agent/how-to-query
+```
+
+before issuing queries.
+
+---
