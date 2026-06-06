@@ -1,0 +1,62 @@
+services:
+  cadis-datasets:
+    image: ${EONA_CADIS_DATASETS_IMAGE:-ghcr.io/isemptyc/eona-cadis-datasets:latest}
+    restart: unless-stopped
+
+  eona-project-a:
+    image: ${EONA_MCP_IMAGE:-ghcr.io/isemptyc/eona-mcp:latest}
+    command: ["/opt/eona/eona-mcp/bin/eona-mcp-http"]
+    restart: unless-stopped
+    environment:
+      EONA_PROJECT_ID: ${EONA_PROJECT_A_ID:-project-a}
+      EONA_PROJECT_DESCRIPTION: ${EONA_PROJECT_A_DESCRIPTION:-Photos from one mounted library.}
+      EONA_SESSION_ID: ${EONA_PROJECT_A_SESSION_ID:-${EONA_PROJECT_A_ID:-project-a}}
+      EONA_SOURCES_JSON: '["/photos"]'
+      EONA_MCP_WORKSPACE: /workspace
+      EONA_CADIS_DATASET_URL: http://cadis-datasets/cadis/dataset/releases
+      EONA_MCP_HTTP_HOST: 0.0.0.0
+      EONA_MCP_HTTP_PORT: "8711"
+      EONA_MCP_HTTP_PATH: ${EONA_PROJECT_A_MCP_PATH:-/mcp}
+      EONA_MCP_BEARER_TOKEN: ${EONA_PROJECT_A_BEARER_TOKEN:?Set EONA_PROJECT_A_BEARER_TOKEN}
+      EONA_MCP_ALLOWED_ORIGINS: ${EONA_PROJECT_A_ALLOWED_ORIGINS:-}
+    volumes:
+      - eona-user:/workspace
+      - type: bind
+        source: ${EONA_PROJECT_A_PHOTOS:?Set EONA_PROJECT_A_PHOTOS to a host photo folder}
+        target: /photos
+        read_only: true
+    ports:
+      - "${EONA_PROJECT_A_PORT:-8711}:8711"
+    depends_on:
+      - cadis-datasets
+
+  eona-project-b:
+    image: ${EONA_MCP_IMAGE:-ghcr.io/isemptyc/eona-mcp:latest}
+    command: ["/opt/eona/eona-mcp/bin/eona-mcp-http"]
+    restart: unless-stopped
+    profiles: ["project-b"]
+    environment:
+      EONA_PROJECT_ID: ${EONA_PROJECT_B_ID:-project-b}
+      EONA_PROJECT_DESCRIPTION: ${EONA_PROJECT_B_DESCRIPTION:-Photos from another mounted library.}
+      EONA_SESSION_ID: ${EONA_PROJECT_B_SESSION_ID:-${EONA_PROJECT_B_ID:-project-b}}
+      EONA_SOURCES_JSON: '["/photos"]'
+      EONA_MCP_WORKSPACE: /workspace
+      EONA_CADIS_DATASET_URL: http://cadis-datasets/cadis/dataset/releases
+      EONA_MCP_HTTP_HOST: 0.0.0.0
+      EONA_MCP_HTTP_PORT: "8712"
+      EONA_MCP_HTTP_PATH: ${EONA_PROJECT_B_MCP_PATH:-/mcp}
+      EONA_MCP_BEARER_TOKEN: ${EONA_PROJECT_B_BEARER_TOKEN:-change-me-project-b}
+      EONA_MCP_ALLOWED_ORIGINS: ${EONA_PROJECT_B_ALLOWED_ORIGINS:-}
+    volumes:
+      - eona-user:/workspace
+      - type: bind
+        source: ${EONA_PROJECT_B_PHOTOS:-./photos-project-b}
+        target: /photos
+        read_only: true
+    ports:
+      - "${EONA_PROJECT_B_PORT:-8712}:8712"
+    depends_on:
+      - cadis-datasets
+
+volumes:
+  eona-user:
