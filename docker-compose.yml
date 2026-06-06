@@ -20,7 +20,6 @@ services:
       EONA_MCP_BEARER_TOKEN: ${EONA_PROJECT_A_BEARER_TOKEN:?Set EONA_PROJECT_A_BEARER_TOKEN}
       EONA_MCP_ALLOWED_ORIGINS: ${EONA_PROJECT_A_ALLOWED_ORIGINS:-}
     volumes:
-      - eona-user:/workspace
       - type: bind
         source: ${EONA_PROJECT_A_PHOTOS:?Set EONA_PROJECT_A_PHOTOS to a host photo folder}
         target: /photos
@@ -48,7 +47,6 @@ services:
       EONA_MCP_BEARER_TOKEN: ${EONA_PROJECT_B_BEARER_TOKEN:-change-me-project-b}
       EONA_MCP_ALLOWED_ORIGINS: ${EONA_PROJECT_B_ALLOWED_ORIGINS:-}
     volumes:
-      - eona-user:/workspace
       - type: bind
         source: ${EONA_PROJECT_B_PHOTOS:-./photos-project-b}
         target: /photos
@@ -57,6 +55,3 @@ services:
       - "${EONA_PROJECT_B_PORT:-8712}:8712"
     depends_on:
       - cadis-datasets
-
-volumes:
-  eona-user:
