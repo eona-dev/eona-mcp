@@ -10,6 +10,36 @@ log() {
   printf '[eona-mcp bootstrap] %s\n' "$*" >&2
 }
 
+human_color() {
+  code="$1"
+  if [ -t 2 ] && [ -z "${NO_COLOR:-}" ]; then
+    printf '\033[%sm' "$code"
+  fi
+}
+
+human_section() {
+  printf '\n[%s]\n\n' "$1" >&2
+}
+
+human_pending() {
+  printf '%s...\n' "$1" >&2
+}
+
+human_done() {
+  label="$1"
+  status="${2:-done}"
+  printf '%s... %s%s%s\n' "$label" "$(human_color 32)" "$status" "$(human_color 0)" >&2
+}
+
+display_path() {
+  path="$1"
+  case "$path" in
+    "$HOME") printf '~\n' ;;
+    "$HOME"/*) printf '~/%s\n' "${path#"$HOME"/}" ;;
+    *) printf '%s\n' "$path" ;;
+  esac
+}
+
 usage() {
   cat >&2 <<'EOF'
 Usage: bootstrap.sh [options]
@@ -97,8 +127,12 @@ download_mcp_source_root() {
   mkdir -p "$cache_dir" || fail "could not create MCP bootstrap cache: $cache_dir"
   archive_path="${cache_dir}/eona-mcp-bootstrap.tar.gz"
   staging_dir="$(mktemp -d "${TMPDIR:-/tmp}/eona-mcp-bootstrap.XXXXXX")" || fail "could not create MCP bootstrap staging directory"
+  human_pending "archive downloading"
   download "$archive_url" "$archive_path" || fail "could not download MCP archive: $archive_url"
+  human_done "archive downloading"
+  human_pending "extracting"
   tar -xzf "$archive_path" -C "$staging_dir" || fail "could not extract MCP archive: $archive_path"
+  human_done "extracting"
   candidate="$(find "$staging_dir" -maxdepth 2 -type f -name pyproject.toml -print | head -n 1)"
   [ -n "$candidate" ] || fail "MCP archive did not contain pyproject.toml"
   candidate="$(cd "$(dirname "$candidate")" && pwd)"
@@ -208,6 +242,21 @@ prepare_mcp_project() {
   EONA_SOURCE_ROOTS_JSON="$source_roots_json" \
   PYTHONPATH="${install_dir}/src${PYTHONPATH:+:$PYTHONPATH}" \
   python3 -m eona_mcp.start_project --prepare-only --marker-dir "${workspace_dir}/.eona-mcp-prepare"
+}
+
+print_install_section() {
+  install_dir="$1"
+  cli_executable="$2"
+  launcher_path="$3"
+  env_file="$4"
+  cyan="$(human_color 36)"
+  reset="$(human_color 0)"
+
+  human_section "INSTALL"
+  printf 'path %s%s%s\n' "$cyan" "$(display_path "$install_dir")" "$reset" >&2
+  printf 'cli %s%s%s\n' "$cyan" "$(display_path "$cli_executable")" "$reset" >&2
+  printf 'launcher %s%s%s\n' "$cyan" "$(display_path "$launcher_path")" "$reset" >&2
+  printf 'env %s%s%s\n' "$cyan" "$(display_path "$env_file")" "$reset" >&2
 }
 
 should_prepare_sources() {
@@ -413,14 +462,21 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+human_section "DOWNLOAD"
 if [ -n "$SOURCE_ROOT" ]; then
+  human_pending "source root checking"
   SOURCE_ROOT="$(cd "$SOURCE_ROOT" && pwd)"
   source_root_valid "$SOURCE_ROOT" || fail "invalid MCP source root: $SOURCE_ROOT"
-elif SOURCE_ROOT="$(detect_script_source_root)"; then
-  :
+  human_done "source root checking"
 else
-  MCP_ARCHIVE_URL="${MCP_ARCHIVE_URL:-${MCP_ARTIFACT_URL%/}/releases/${EONA_MCP_PRODUCTION_VERSION}/eona-mcp/eona-mcp-${EONA_MCP_PRODUCTION_VERSION}.tar.gz}"
-  SOURCE_ROOT="$(download_mcp_source_root "$MCP_ARCHIVE_URL" "$BOOTSTRAP_CACHE")"
+  human_pending "source root checking"
+  if SOURCE_ROOT="$(detect_script_source_root)"; then
+    human_done "source root checking"
+  else
+    human_done "source root checking" "not found"
+    MCP_ARCHIVE_URL="${MCP_ARCHIVE_URL:-${MCP_ARTIFACT_URL%/}/releases/${EONA_MCP_PRODUCTION_VERSION}/eona-mcp/eona-mcp-${EONA_MCP_PRODUCTION_VERSION}.tar.gz}"
+    SOURCE_ROOT="$(download_mcp_source_root "$MCP_ARCHIVE_URL" "$BOOTSTRAP_CACHE")"
+  fi
 fi
 
 CLI_DEPENDENCY_CONTRACT="${SOURCE_ROOT}/contracts/eona-cli-dependency.json"
@@ -455,6 +511,8 @@ else
   provision_cli "$CLI_INSTALL_DIR" "$CLI_BOOTSTRAP_URL" "$CLI_VERSION" "$CLI_ARTIFACT_URL"
 fi
 
+print_install_section "$MCP_INSTALL_DIR" "$CLI_EXECUTABLE" "${MCP_INSTALL_DIR}/eona-mcp-stdio.sh" "${MCP_INSTALL_DIR}/eona-mcp.env"
+
 if should_prepare_sources "$SOURCES_JSON"; then
   prepare_mcp_project "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION" "$SOURCE_ROOTS_JSON"
 else
@@ -466,3 +524,5 @@ log "Workspace: ${WORKSPACE_DIR}"
 log "Project: ${PROJECT_ID}/${SESSION_ID}"
 log "Run: ${MCP_INSTALL_DIR}/bin/eona-mcp"
 log "Stdio launcher: ${MCP_INSTALL_DIR}/eona-mcp-stdio.sh"
+printf '\n%sbootstrap succeeded%s\n' "$(human_color 32)" "$(human_color 0)" >&2
+printf 'For more details about EONA MCP, please read README.md.\n' >&2

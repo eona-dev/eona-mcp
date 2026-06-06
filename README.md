@@ -36,4 +36,6 @@ EONA MCP is project-scoped. Bootstrap writes project defaults into `~/.eona/eona
 
 For stdio MCP client entries, bootstrap also writes `~/.eona/eona-mcp/eona-mcp-stdio.sh`, which delegates to `~/.eona/eona-mcp/bin/eona-mcp`.
 
+Bootstrap prints the same human-readable onboarding sections whether it runs from a checkout or a hosted archive: `[DOWNLOAD]`, `[INSTALL]`, `[PROJECT SOURCES]` when sources are configured, and a final `bootstrap succeeded` line. Use the printed `launcher` path as the stdio MCP command in Codex, Claude, or another MCP client.
+
 `contracts/eona-cli-dependency.json` describes the runtime compatibility surface that MCP expects from `eona-cli`. Bootstrap artifact pins live separately in `contracts/eona-cli-bootstrap.json`, because `eona-cli` may upgrade itself after installation.
