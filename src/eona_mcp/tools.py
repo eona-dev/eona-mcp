@@ -23,21 +23,40 @@ class EonaMcpTools:
         return [
             {
                 "name": f"{prefix}.append",
-                "description": "Append local photo source paths to this MCP project's EONA session.",
+                "description": (
+                    "Append local photo source paths to this MCP project's EONA session. "
+                    "By default use refresh=false. Set refresh=true only after the user explicitly asks "
+                    "to rescan or update photo metadata, because refresh can take a long time."
+                ),
                 "inputSchema": {
                     "type": "object",
                     "required": ["sources"],
                     "properties": {
-                        "sources": {"type": "array", "items": {"type": "string"}},
-                        "source_roots": {"type": "array", "items": {"type": "string"}},
-                        "refresh": {"type": "boolean"},
+                        "sources": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Local photo folder paths to attach to the project session.",
+                        },
+                        "source_roots": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional source root labels; must match sources one-to-one.",
+                        },
+                        "refresh": {
+                            "type": "boolean",
+                            "default": False,
+                            "description": (
+                                "Keep false unless the user explicitly confirms a rescan/update. "
+                                "When true, EONA may scan and refresh photo metadata for the requested folders."
+                            ),
+                        },
                     },
                     "additionalProperties": False,
                 },
             },
             {"name": f"{prefix}.list", "description": "List source roots in this MCP project session.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
             {"name": f"{prefix}.reset", "description": "Reset this MCP project session without deleting source photos.", "inputSchema": {"type": "object", "required": ["confirm"], "properties": {"confirm": {"type": "boolean"}}, "additionalProperties": False}},
-            {"name": f"{prefix}.refresh", "description": "Refresh source roots in this MCP project session.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
+            {"name": f"{prefix}.refresh", "description": "Refresh all source roots in this MCP project session. Use only when the user explicitly asks to rescan/update existing photo metadata.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
             {"name": f"{prefix}.query", "description": "Query metadata and Cadis-enriched photo memory for this MCP project session.", "inputSchema": {"type": "object", "required": ["plan"], "properties": {"plan": {"type": "object"}, "in_sources": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": False}},
         ]
 
