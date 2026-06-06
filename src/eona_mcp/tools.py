@@ -8,6 +8,13 @@ from typing import Any
 from .cli import EonaCliInvocationError, EonaCliRunner
 from .config import EonaMcpConfig
 
+QUERY_GUIDE_URI = "eona://agent/how-to-query"
+QUERY_FORMAT_GUIDANCE = (
+    "Please read MCP resource eona://agent/how-to-query before retrying. "
+    "The query tool requires an Eona Query v1 plan with query_version=1, "
+    "anchor={\"entity\":\"photo\"}, select, and supported entities/attributes/operators only."
+)
+
 
 @dataclass(frozen=True)
 class EonaMcpTools:
@@ -59,6 +66,11 @@ class EonaMcpTools:
                     "Before complex queries, read resource eona://agent/how-to-query. "
                     "The plan must be Eona Query v1: include query_version=1, "
                     "anchor={\"entity\":\"photo\"}, select, and optional filters/sort_by/limit. "
+                    "Supported fields include photo.id/content_id, path.text, time.taken_at/year/month/day, "
+                    "location.country/admin_label/admin_path, camera.make/model, and camera_detail lens/settings. "
+                    "Use aggregation inside select/sort_by items, for example "
+                    "{\"entity\":\"photo\",\"attribute\":\"id\",\"aggregation\":\"count\"}. "
+                    "Do not request filename, filepath, raw GPS, trips, albums, or SQL. "
                     "Do not write SQL."
                 ),
                 "inputSchema": {
@@ -107,8 +119,19 @@ class EonaMcpTools:
             if name == f"{prefix}.query":
                 plan = args.get("plan")
                 if not isinstance(plan, dict):
-                    return _tool_error("`plan` must be an object.")
-                return _tool_result(self.runner.query(plan=plan, in_sources=_string_list(args.get("in_sources"))))
+                    return _query_format_error("`plan` must be an object.")
+                plan_error = _validate_query_plan_shape(plan)
+                if plan_error:
+                    return _query_format_error(plan_error)
+                try:
+                    return _tool_result(self.runner.query(plan=plan, in_sources=_string_list(args.get("in_sources"))))
+                except EonaCliInvocationError as exc:
+                    if _looks_like_query_format_error(exc):
+                        return _query_format_error(
+                            "EONA CLI rejected the query plan format.",
+                            payload={"returncode": exc.returncode, "stdout": exc.stdout, "stderr": exc.stderr},
+                        )
+                    raise
             if name == f"{prefix}.append":
                 sources = _string_list(args.get("sources"))
                 if not sources:
@@ -158,3 +181,49 @@ def _tool_error(message: str, *, payload: dict[str, Any] | None = None) -> dict[
         ],
         "isError": True,
     }
+
+
+def _query_format_error(message: str, *, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    body = {
+        "query_resource_uri": QUERY_GUIDE_URI,
+        "retry_instruction": QUERY_FORMAT_GUIDANCE,
+    }
+    if payload:
+        body.update(payload)
+    return _tool_error(f"{message} {QUERY_FORMAT_GUIDANCE}", payload=body)
+
+
+def _validate_query_plan_shape(plan: dict[str, Any]) -> str | None:
+    if plan.get("query_version") != 1:
+        return "`plan.query_version` must be 1."
+    anchor = plan.get("anchor")
+    if not isinstance(anchor, dict):
+        return "`plan.anchor` must be an object such as {\"entity\":\"photo\"}."
+    if not isinstance(anchor.get("entity"), str) or not anchor["entity"].strip():
+        return "`plan.anchor.entity` must be a non-empty string such as \"photo\"."
+    select = plan.get("select")
+    if not isinstance(select, list) or not select:
+        return "`plan.select` must be a non-empty array of typed entity selections."
+    return None
+
+
+def _looks_like_query_format_error(exc: EonaCliInvocationError) -> bool:
+    text = f"{exc.stdout}\n{exc.stderr}".lower()
+    markers = (
+        "query_version",
+        "anchor",
+        "select",
+        "filter",
+        "group_by",
+        "sort_by",
+        "operator",
+        "aggregation",
+        "attribute",
+        "entity",
+        "schema",
+        "validation",
+        "unsupported",
+        "unknown",
+        "invalid",
+    )
+    return any(marker in text for marker in markers)

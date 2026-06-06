@@ -5,6 +5,7 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from threading import Thread
 from typing import Any
 
@@ -44,7 +45,8 @@ class EonaCliRunner:
         command.extend(["--input", "-"])
         for source in _source_args(in_sources or ()):
             command.extend(["--in-source", source])
-        return self._run_json(command, stdin=json.dumps(plan, separators=(",", ":")))
+        payload = self._run_json(command, stdin=json.dumps(plan, separators=(",", ":")))
+        return _inline_query_artifact(payload)
 
     def reset_session(self) -> dict[str, Any]:
         command = [
@@ -176,3 +178,42 @@ def _run_capturing_stdout_and_streaming_stderr(command: list[str], *, stdin: str
 
 def _source_args(values: list[str] | tuple[str, ...]) -> list[str]:
     return [str(item).strip() for item in values if str(item).strip()]
+
+
+def _inline_query_artifact(payload: dict[str, Any]) -> dict[str, Any]:
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        return payload
+    if isinstance(result.get("rows"), list):
+        return payload
+    artifact = result.get("artifact")
+    if not isinstance(artifact, dict):
+        return payload
+    artifact_path = artifact.get("path")
+    if not isinstance(artifact_path, str) or not artifact_path.strip():
+        return payload
+    try:
+        artifact_payload = json.loads(Path(artifact_path).read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001 - preserve the query result and expose transport context.
+        result["artifact_inline_error"] = str(exc)
+        return payload
+    rows = _artifact_rows(artifact_payload)
+    if rows is None:
+        result["artifact_inline_error"] = "Artifact JSON did not contain query rows."
+        return payload
+    result["rows"] = rows
+    result["artifact_inlined"] = True
+    result.pop("artifact", None)
+    return payload
+
+
+def _artifact_rows(payload: Any) -> list[Any] | None:
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict) and isinstance(payload.get("rows"), list):
+        return payload["rows"]
+    if isinstance(payload, dict) and isinstance(payload.get("result"), dict):
+        rows = payload["result"].get("rows")
+        if isinstance(rows, list):
+            return rows
+    return None
