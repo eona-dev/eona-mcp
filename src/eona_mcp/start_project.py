@@ -153,6 +153,7 @@ def prepare_project(
     config = load_config(merged_env)
     marker = _prepare_marker_path(config, marker_dir=marker_dir)
     runner = EonaCliRunner(config)
+    force_append = _parse_bool(os.environ.get("EONA_FORCE_APPEND", "0"))
     _log_prepare_environment(config)
     if not config.sources:
         current_source_roots = _existing_session_source_roots(runner)
@@ -174,7 +175,7 @@ def prepare_project(
         payload["current_source_roots"] = current_source_roots
         _log(payload)
         return payload
-    if marker is not None and marker.is_file():
+    if marker is not None and marker.is_file() and not force_append:
         current_source_roots = _existing_session_source_roots(runner)
         payload: dict[str, object] = {
             "ok": True,
@@ -468,7 +469,7 @@ def _log(payload: dict[str, object]) -> None:
             print("", file=sys.stderr, flush=True)
         for root in retained_roots:
             print(f"{cyan}{_display_path(root)}{reset}", file=sys.stderr, flush=True)
-        print(f"{len(retained_roots)} existing sources retained", file=sys.stderr, flush=True)
+        print(f"{len(all_roots)} total sources attached", file=sys.stderr, flush=True)
         print("", file=sys.stderr, flush=True)
     elif not prepared_paths and skip_reason != "no_sources_configured":
         print("none", file=sys.stderr, flush=True)
