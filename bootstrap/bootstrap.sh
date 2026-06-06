@@ -343,7 +343,7 @@ cli_needs_upgrade() {
   version_lt "$current_version" "$min_version"
 }
 
-EONA_MCP_PRODUCTION_VERSION="0.0.5"
+EONA_MCP_PRODUCTION_VERSION="0.0.6"
 CLI_MIN_VERSION="0.1.1"
 DEFAULT_CLI_BOOTSTRAP_VERSION="0.1.1"
 SOURCE_ROOT="${EONA_MCP_SOURCE_ROOT:-}"
