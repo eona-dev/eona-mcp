@@ -273,7 +273,7 @@ provision_cli() {
   command -v curl >/dev/null 2>&1 || fail "curl is required to provision eona-cli"
   cli_bootstrap_path="$(mktemp "${TMPDIR:-/tmp}/eona-cli-bootstrap.XXXXXX")" || fail "could not create CLI bootstrap temp file"
   download "$cli_bootstrap_url" "$cli_bootstrap_path" || fail "could not download CLI bootstrap: $cli_bootstrap_url"
-  set -- "$cli_install_dir"
+  set -- --no-copy "$cli_install_dir"
   if [ -n "$cli_artifact_url" ]; then
     set -- --artifact-url "$cli_artifact_url" "$@"
   fi
