@@ -162,9 +162,7 @@ install_mcp_surface() {
     bin \
     contracts \
     src \
-    AGPL_NETWORK_SOURCE_NOTICE.md \
     LICENSE \
-    LICENSES \
     README.md \
     pyproject.toml; do
     copy_path "$source_root" "$install_dir" "$relpath"

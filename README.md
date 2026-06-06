@@ -96,3 +96,10 @@ Repository:
 ```text
 https://github.com/isemptyc/eona-cli
 ```
+
+`eona-cli` is distributed separately under GPL-3.0. `eona-mcp` does not bundle
+`eona-cli`; it integrates with it as an external runtime dependency.
+
+## License
+
+`eona-mcp` is licensed under the MIT License. See `LICENSE`.

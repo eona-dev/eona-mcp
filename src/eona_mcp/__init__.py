@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: MIT
 """Thin MCP wrapper for the local EONA CLI."""
 
 from __future__ import annotations
