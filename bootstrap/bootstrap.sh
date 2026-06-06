@@ -252,16 +252,13 @@ print_install_section() {
   install_dir="$1"
   cli_executable="$2"
   launcher_path="$3"
-  env_file="$4"
   cyan="$(human_color 36)"
   reset="$(human_color 0)"
 
   human_section "INSTALL"
   printf 'path %s%s%s\n' "$cyan" "$(display_path "$install_dir")" "$reset" >&2
-  printf 'mcp %s%s%s\n' "$cyan" "$(display_path "${install_dir%/}/bin/eona-mcp")" "$reset" >&2
   printf 'eona-cli %s%s%s\n' "$cyan" "$(display_path "$cli_executable")" "$reset" >&2
-  printf 'launcher %s%s%s\n' "$cyan" "$(display_path "$launcher_path")" "$reset" >&2
-  printf 'env %s%s%s\n' "$cyan" "$(display_path "$env_file")" "$reset" >&2
+  printf 'stdio %s%s%s\n' "$cyan" "$(display_path "$launcher_path")" "$reset" >&2
 }
 
 should_prepare_sources() {
@@ -516,7 +513,7 @@ else
   provision_cli "$CLI_INSTALL_DIR" "$CLI_BOOTSTRAP_URL" "$CLI_VERSION" "$CLI_ARTIFACT_URL"
 fi
 
-print_install_section "$MCP_INSTALL_DIR" "$CLI_EXECUTABLE" "${MCP_INSTALL_DIR}/eona-mcp-stdio.sh" "${MCP_INSTALL_DIR}/eona-mcp.env"
+print_install_section "$MCP_INSTALL_DIR" "$CLI_EXECUTABLE" "${MCP_INSTALL_DIR}/eona-mcp-stdio.sh"
 
 if should_prepare_sources "$SOURCES_JSON"; then
   prepare_mcp_project "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION" "$SOURCE_ROOTS_JSON"
@@ -527,7 +524,6 @@ fi
 log "Installed EONA MCP to ${MCP_INSTALL_DIR}"
 log "Workspace: ${WORKSPACE_DIR}"
 log "Project: ${PROJECT_ID}/${SESSION_ID}"
-log "MCP command: ${MCP_INSTALL_DIR}/bin/eona-mcp"
-log "Stdio launcher: ${MCP_INSTALL_DIR}/eona-mcp-stdio.sh"
+log "Stdio MCP command: ${MCP_INSTALL_DIR}/eona-mcp-stdio.sh"
 printf '\n%sbootstrap succeeded%s\n' "$(human_color 32)" "$(human_color 0)" >&2
 printf 'For more details about EONA MCP, please read README.md.\n' >&2
