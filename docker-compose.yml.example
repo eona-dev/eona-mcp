@@ -6,7 +6,6 @@ services:
   eona-project-a:
     image: ${EONA_MCP_IMAGE:-ghcr.io/isemptyc/eona-mcp:latest}
     command: ["/opt/eona/eona-mcp/bin/eona-mcp-http"]
-    restart: unless-stopped
     environment:
       EONA_PROJECT_ID: ${EONA_PROJECT_A_ID:-project-a}
       EONA_PROJECT_DESCRIPTION: ${EONA_PROJECT_A_DESCRIPTION:-Photos from one mounted library.}
@@ -32,7 +31,6 @@ services:
   eona-project-b:
     image: ${EONA_MCP_IMAGE:-ghcr.io/isemptyc/eona-mcp:latest}
     command: ["/opt/eona/eona-mcp/bin/eona-mcp-http"]
-    restart: unless-stopped
     profiles: ["project-b"]
     environment:
       EONA_PROJECT_ID: ${EONA_PROJECT_B_ID:-project-b}
