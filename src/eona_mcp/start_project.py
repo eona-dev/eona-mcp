@@ -180,11 +180,15 @@ def prepare_project(
         payload: dict[str, object] = {
             "ok": True,
             "operation": "mcp_prepare",
+            "status": "skipped",
+            "skip_reason": "successful_prepare_marker",
             "project_id": config.project_id,
             "session_id": config.session_id,
             "sources": list(config.sources),
             "source_roots": list(config.source_roots),
+            "requested_source_roots": list(config.source_roots or config.sources),
             "summary": "Skipped project preparation; successful marker already exists.",
+            "hint": "Set EONA_FORCE_APPEND=1 to force bootstrap to append/refresh these sources, or use the MCP append/refresh tools after bootstrap.",
             "marker": str(marker),
         }
         payload["current_source_roots"] = current_source_roots
@@ -474,7 +478,7 @@ def _log(payload: dict[str, object]) -> None:
     elif not prepared_paths and skip_reason != "no_sources_configured":
         print("none", file=sys.stderr, flush=True)
 
-    if skip_reason == "existing_session_sources":
+    if skip_reason in {"existing_session_sources", "successful_prepare_marker"}:
         requested_blocked: list[str] = []
         if isinstance(requested_roots, list):
             requested_blocked = [str(item).strip() for item in requested_roots if str(item).strip()]
