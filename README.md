@@ -1,4 +1,4 @@
-# eona-mcp
+# EONA MCP
 
 ```text
 Expose local EONA photo metadata to Codex, Claude, and other MCP clients.
@@ -87,7 +87,7 @@ before issuing queries.
 
 ---
 
-## eona-cli
+## EONA CLI
 
 `eona-cli` is the local EONA runtime used by `eona-mcp` to index photo folders, maintain project sessions, and execute EONA Query v1 plans.
 
