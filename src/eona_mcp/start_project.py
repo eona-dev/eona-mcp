@@ -259,16 +259,7 @@ def _confirm_existing_source_roots(
     if _parse_bool(os.environ.get("EONA_FORCE_APPEND", "0")) or _parse_bool(os.environ.get("EONA_MCP_CONFIRM_APPEND", "0")):
         return None
 
-    lines = [
-        "Existing EONA project session already has source roots:",
-        *[f"  - {root}" for root in existing_roots],
-        "Requested EONA_SOURCES_JSON was not added during bootstrap:",
-        *[f"  - {root}" for root in requested_roots],
-    ]
     skip_reason = "existing_session_sources"
-    if stdin.isatty():
-        print("\n".join(lines), file=stderr)
-        print("Bootstrap will not append to an existing project session. Use EONA_FORCE_APPEND=1 to override.", file=stderr)
     summary = (
         "Skipped source preparation because the existing project session already has source roots. "
         "Bootstrap does not append or refresh sources in an existing project session by default."
@@ -483,10 +474,12 @@ def _log(payload: dict[str, object]) -> None:
         print("none", file=sys.stderr, flush=True)
 
     if skip_reason == "existing_session_sources":
-        print("", file=sys.stderr, flush=True)
-        print("requested sources were not appended:", file=sys.stderr, flush=True)
+        requested_blocked: list[str] = []
         if isinstance(requested_roots, list):
-            for root in requested_roots:
+            requested_blocked = [str(item).strip() for item in requested_roots if str(item).strip()]
+        if requested_blocked:
+            print("requested sources were not appended:", file=sys.stderr, flush=True)
+            for root in requested_blocked:
                 print(f"  {orange}{_display_path(root)}{reset}", file=sys.stderr, flush=True)
     elif skip_reason == "no_sources_configured":
         pass
