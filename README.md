@@ -26,7 +26,9 @@ When bootstrap succeeds, configure your MCP client to use:
 
 ## Quick Start
 
-Attach photo folders during bootstrap:
+Recommended: attach photo folders during bootstrap, before adding EONA MCP to
+your MCP client. Indexing can take time, and bootstrap can show progress in a
+normal terminal.
 
 ```bash
 export EONA_SOURCES_JSON='["/path/to/photos"]'
