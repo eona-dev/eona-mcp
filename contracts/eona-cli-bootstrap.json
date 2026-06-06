@@ -2,10 +2,10 @@
   "schema_version": 1,
   "product": "eona-cli",
   "purpose": "bootstrap_install",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "artifacts": {
     "macos_arm64": {
-      "path": "releases/0.1.0/eona-cli-macos-arm64-0.1.0.tar.gz",
+      "path": "releases/0.1.1/eona-cli/eona-macos-arm64-0.1.1.tar.gz",
       "sha256": "PINNED_BY_RELEASE_WORKFLOW"
     }
   },

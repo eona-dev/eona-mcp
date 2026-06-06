@@ -3,7 +3,7 @@
   "product": "eona-cli",
   "purpose": "runtime_compatibility",
   "compatibility": {
-    "min_version": "0.1.0",
+    "min_version": "0.1.1",
     "query_version": 1,
     "required_commands": [
       "add",

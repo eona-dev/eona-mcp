@@ -343,8 +343,9 @@ cli_needs_upgrade() {
   version_lt "$current_version" "$min_version"
 }
 
-EONA_MCP_PRODUCTION_VERSION="0.1.0"
-DEFAULT_CLI_BOOTSTRAP_VERSION="0.1.0"
+EONA_MCP_PRODUCTION_VERSION="0.0.5"
+CLI_MIN_VERSION="0.1.1"
+DEFAULT_CLI_BOOTSTRAP_VERSION="0.1.1"
 SOURCE_ROOT="${EONA_MCP_SOURCE_ROOT:-}"
 MCP_ARTIFACT_URL="${EONA_MCP_ARTIFACT_URL:-https://mcp.eona.dev}"
 MCP_ARCHIVE_URL="${EONA_MCP_ARCHIVE_URL:-}"
@@ -481,7 +482,11 @@ fi
 
 CLI_DEPENDENCY_CONTRACT="${SOURCE_ROOT}/contracts/eona-cli-dependency.json"
 if [ -f "$CLI_DEPENDENCY_CONTRACT" ]; then
-  DEFAULT_CLI_BOOTSTRAP_VERSION="$(json_field "$CLI_DEPENDENCY_CONTRACT" compatibility.min_version)" || fail "dependency contract missing compatibility.min_version"
+  CLI_MIN_VERSION="$(json_field "$CLI_DEPENDENCY_CONTRACT" compatibility.min_version)" || fail "dependency contract missing compatibility.min_version"
+fi
+CLI_BOOTSTRAP_CONTRACT="${SOURCE_ROOT}/contracts/eona-cli-bootstrap.json"
+if [ -f "$CLI_BOOTSTRAP_CONTRACT" ]; then
+  DEFAULT_CLI_BOOTSTRAP_VERSION="$(json_field "$CLI_BOOTSTRAP_CONTRACT" version)" || fail "bootstrap contract missing version"
 fi
 CLI_VERSION="${CLI_VERSION:-${EONA_CLI_BOOTSTRAP_VERSION:-$DEFAULT_CLI_BOOTSTRAP_VERSION}}"
 
@@ -503,7 +508,7 @@ CLI_EXECUTABLE="${CLI_INSTALL_DIR%/}/bin/eona"
 
 if [ "$SKIP_CLI" -eq 1 ]; then
   log "Skipped eona-cli provisioning"
-elif [ -x "$CLI_EXECUTABLE" ] && [ "$REPAIR_CLI" -ne 1 ] && ! cli_needs_upgrade "$CLI_EXECUTABLE" "$DEFAULT_CLI_BOOTSTRAP_VERSION"; then
+elif [ -x "$CLI_EXECUTABLE" ] && [ "$REPAIR_CLI" -ne 1 ] && ! cli_needs_upgrade "$CLI_EXECUTABLE" "$CLI_MIN_VERSION"; then
   log "Using existing eona-cli at ${CLI_EXECUTABLE}"
 else
   log "Provisioning eona-cli into ${CLI_INSTALL_DIR}"
