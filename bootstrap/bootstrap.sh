@@ -254,7 +254,8 @@ print_install_section() {
 
   human_section "INSTALL"
   printf 'path %s%s%s\n' "$cyan" "$(display_path "$install_dir")" "$reset" >&2
-  printf 'cli %s%s%s\n' "$cyan" "$(display_path "$cli_executable")" "$reset" >&2
+  printf 'mcp %s%s%s\n' "$cyan" "$(display_path "${install_dir%/}/bin/eona-mcp")" "$reset" >&2
+  printf 'eona-cli %s%s%s\n' "$cyan" "$(display_path "$cli_executable")" "$reset" >&2
   printf 'launcher %s%s%s\n' "$cyan" "$(display_path "$launcher_path")" "$reset" >&2
   printf 'env %s%s%s\n' "$cyan" "$(display_path "$env_file")" "$reset" >&2
 }
