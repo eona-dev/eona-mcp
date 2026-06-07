@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import base64
 import mimetypes
 import json
 import secrets
@@ -101,6 +102,14 @@ class EonaMcpTools:
                             "default": DEFAULT_FETCH_MAX_BYTES,
                             "description": "Maximum bytes per photo to return.",
                         },
+                        "include_content": {
+                            "type": "boolean",
+                            "default": False,
+                            "description": (
+                                "When true, also return MCP image content blocks. "
+                                "Leave false for clients that prefer asset URLs."
+                            ),
+                        },
                     },
                     "additionalProperties": False,
                 },
@@ -136,7 +145,12 @@ class EonaMcpTools:
                 if len(photo_ids) > FETCH_MAX_PHOTOS:
                     return _fetch_format_error(f"`photo_ids` may include at most {FETCH_MAX_PHOTOS} photo id(s) per fetch call.")
                 max_bytes = _positive_int(args.get("max_bytes"), DEFAULT_FETCH_MAX_BYTES)
-                return _fetch_photos(self, photo_ids=photo_ids, max_bytes=max_bytes)
+                return _fetch_photos(
+                    self,
+                    photo_ids=photo_ids,
+                    max_bytes=max_bytes,
+                    include_content=bool(args.get("include_content", False)),
+                )
             if name == f"{prefix}.append":
                 sources = _string_list(args.get("sources"))
                 if not sources:
@@ -262,7 +276,7 @@ def _looks_like_path_values(values: list[str]) -> bool:
     )
 
 
-def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) -> dict[str, Any]:
+def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int, include_content: bool) -> dict[str, Any]:
     allowed_roots = _allowed_source_roots(tools)
     if not allowed_roots:
         return _tool_error("No readable configured or indexed EONA source folders are available for photo fetch.")
@@ -302,6 +316,16 @@ def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) 
         else:
             failed.append({"photo_id": photo_id, "error": "No EONA asset directory is configured for photo fetch."})
             continue
+        if include_content:
+            data = base64.b64encode(resolved_path.read_bytes()).decode("ascii")
+            content.append(
+                {
+                    "type": "image",
+                    "data": data,
+                    "mimeType": mime_type,
+                }
+            )
+            item["content_block"] = True
         fetched.append(item)
     content.insert(
         0,

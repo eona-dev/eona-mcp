@@ -35,12 +35,16 @@ Do not fetch an unbounded result set.
 ```json
 {
   "photo_ids": ["pho_..."],
-  "max_bytes": 12582912
+  "max_bytes": 12582912,
+  "include_content": false
 }
 ```
 
 `max_bytes` is optional. Increase it only when the first fetch reports that a
 selected photo exceeds the current byte limit.
+
+`include_content` is optional. Keep it `false` by default. Set it to `true` only
+when the MCP client is known to render MCP image content blocks reliably.
 
 ## Output
 
@@ -60,6 +64,10 @@ file:///Users/example/.eona/workspace/assets/<opaque-name>.jpg
 Use URLs as links. Do not promise that MCP inline image blocks or Markdown image
 embedding will display in the chat UI. The URL is minted by an authenticated MCP
 fetch call and does not expose the source file path.
+
+When `include_content` is `true`, fetch also returns MCP `image` content blocks
+for clients that support them. Treat those blocks as an optional display path;
+the asset URL remains the stable retrieval contract.
 
 ## Failure Handling
 
