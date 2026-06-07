@@ -133,8 +133,9 @@ eona-mcp.<project>.fetch
 The query tool returns metadata and `photo.id` values. The fetch tool retrieves
 indexed photos by `photo.id`; clients should not pass file paths. HTTP MCP
 returns `http://` asset URLs; stdio MCP returns `file://` asset URLs. Fetch can
-also return MCP image content blocks when called with `include_content=true`,
-but asset URLs remain the stable cross-client retrieval contract.
+also return 1200px-bounded MCP image preview content blocks when called with
+`include_content=true`, but asset URLs remain the stable cross-client retrieval
+contract for originals.
 
 ---
 

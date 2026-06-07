@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import io
 import mimetypes
 import json
 import secrets
@@ -26,6 +27,8 @@ FETCH_FORMAT_GUIDANCE = (
     "The fetch tool requires EONA photo.id values in `photo_ids`; never pass source file paths."
 )
 DEFAULT_FETCH_MAX_BYTES = 12 * 1024 * 1024
+CONTENT_BLOCK_MAX_SIZE = (1200, 1200)
+CONTENT_BLOCK_MAX_BYTES = 1_500_000
 FETCH_MAX_PHOTOS = 4
 
 
@@ -106,7 +109,7 @@ class EonaMcpTools:
                             "type": "boolean",
                             "default": False,
                             "description": (
-                                "When true, also return MCP image content blocks. "
+                                "When true, also return 1200px-bounded MCP image preview content blocks. "
                                 "Leave false for clients that prefer asset URLs."
                             ),
                         },
@@ -317,15 +320,20 @@ def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int, 
             failed.append({"photo_id": photo_id, "error": "No EONA asset directory is configured for photo fetch."})
             continue
         if include_content:
-            data = base64.b64encode(resolved_path.read_bytes()).decode("ascii")
+            image_bytes, image_mime_type, image_preview = _content_block_image(resolved_path)
+            data = base64.b64encode(image_bytes).decode("ascii")
             content.append(
                 {
                     "type": "image",
                     "data": data,
-                    "mimeType": mime_type,
+                    "mimeType": image_mime_type,
                 }
             )
             item["content_block"] = True
+            item["content_block_preview"] = image_preview
+            item["content_block_mime_type"] = image_mime_type
+            item["content_block_byte_size"] = len(image_bytes)
+            item["content_block_max_size"] = list(CONTENT_BLOCK_MAX_SIZE)
         fetched.append(item)
     content.insert(
         0,
@@ -366,6 +374,40 @@ def _publish_asset(tools: EonaMcpTools, *, source_path: Path) -> dict[str, str] 
 
 def _file_url(path: Path) -> str:
     return "file://" + quote(str(path.resolve()))
+
+
+def _content_block_image(source_path: Path) -> tuple[bytes, str, bool]:
+    original = source_path.read_bytes()
+    preview = _make_content_preview(original)
+    if preview is None:
+        mime_type = mimetypes.guess_type(str(source_path))[0] or "application/octet-stream"
+        return original, mime_type, False
+    return preview, "image/jpeg", True
+
+
+def _make_content_preview(data: bytes) -> bytes | None:
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return None
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            image = ImageOps.exif_transpose(image)
+            if image.mode not in {"RGB", "L"}:
+                image = image.convert("RGB")
+            preview = image.copy()
+            preview.thumbnail(CONTENT_BLOCK_MAX_SIZE)
+            best: bytes | None = None
+            for quality in (85, 75, 65, 55):
+                output = io.BytesIO()
+                preview.save(output, format="JPEG", quality=quality, optimize=True)
+                candidate = output.getvalue()
+                best = candidate
+                if len(candidate) <= CONTENT_BLOCK_MAX_BYTES:
+                    return candidate
+            return best
+    except Exception:
+        return None
 
 
 def _resolve_photo_paths(tools: EonaMcpTools, photo_ids: list[str]) -> list[dict[str, Any]]:

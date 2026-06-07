@@ -65,9 +65,10 @@ Use URLs as links. Do not promise that MCP inline image blocks or Markdown image
 embedding will display in the chat UI. The URL is minted by an authenticated MCP
 fetch call and does not expose the source file path.
 
-When `include_content` is `true`, fetch also returns MCP `image` content blocks
-for clients that support them. Treat those blocks as an optional display path;
-the asset URL remains the stable retrieval contract.
+When `include_content` is `true`, fetch also returns 1200px-bounded MCP `image`
+preview content blocks for clients that support them. Treat those blocks as an
+optional display path; the asset URL remains the stable retrieval contract for
+the full original.
 
 ## Failure Handling
 
