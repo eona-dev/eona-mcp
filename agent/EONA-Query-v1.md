@@ -124,6 +124,8 @@ Use `location.country` for country-level questions when available.
 
 Use `location.admin_label` and `location.admin_path` for below-country place questions. EONA may need to install or use the relevant Cadis country dataset and run scoped location semantic preparation before the final result is reliable.
 
+If a below-country query uses `location.admin_label`, `location.admin_path`, `location.admin_label_ml`, or `location.admin_names` without a positive `location.country` filter, EONA may return `LOCATION_COUNTRY_REQUIRED_FOR_ADMIN_QUERY` as a follow-up issue even when rows are returned. Treat this as an instruction that the place query is not country-scoped: when you can infer or know the country, rerun the same query with a `location.country` filter before giving a final answer. This protects ambiguous place names such as Cambridge, Paris, London, or Rotterdam from being treated as fully resolved just because some rows matched.
+
 ### `path`
 
 - `text`: an observed source path associated with the photo, as indexed by EONA.
