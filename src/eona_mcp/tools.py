@@ -6,7 +6,6 @@ import io
 import mimetypes
 import json
 import secrets
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -27,6 +26,7 @@ FETCH_FORMAT_GUIDANCE = (
     "The fetch tool requires EONA photo.id values in `photo_ids`; never pass source file paths."
 )
 DEFAULT_FETCH_MAX_BYTES = 12 * 1024 * 1024
+ASSET_MAX_SIZE = (2400, 2400)
 CONTENT_BLOCK_MAX_SIZE = (1200, 1200)
 CONTENT_BLOCK_MAX_BYTES = 1_500_000
 FETCH_MAX_PHOTOS = 4
@@ -353,21 +353,23 @@ def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int, 
     return {"content": content, "isError": bool(failed) and not fetched}
 
 
-def _publish_asset(tools: EonaMcpTools, *, source_path: Path) -> dict[str, str] | None:
+def _publish_asset(tools: EonaMcpTools, *, source_path: Path) -> dict[str, Any] | None:
     asset_base_url = str(tools.config.asset_base_url or "").strip().rstrip("/")
     asset_dir = tools.config.asset_dir
     if asset_dir is None:
         return None
     asset_dir.mkdir(parents=True, exist_ok=True)
-    suffix = source_path.suffix.lower()
-    if len(suffix) > 16 or not suffix.startswith("."):
-        suffix = ""
+    asset_bytes, suffix, mime_type, downsized = _asset_image(source_path)
     filename = f"{secrets.token_urlsafe(24)}{suffix}"
     asset_path = asset_dir / filename
-    shutil.copyfile(source_path, asset_path)
+    asset_path.write_bytes(asset_bytes)
     url = f"{asset_base_url}/{filename}" if asset_base_url else _file_url(asset_path)
     return {
         "asset_path": str(asset_path),
+        "asset_byte_size": len(asset_bytes),
+        "asset_downsized": downsized,
+        "asset_max_size": list(ASSET_MAX_SIZE),
+        "asset_mime_type": mime_type,
         "url": url,
     }
 
@@ -376,16 +378,28 @@ def _file_url(path: Path) -> str:
     return "file://" + quote(str(path.resolve()))
 
 
+def _asset_image(source_path: Path) -> tuple[bytes, str, str, bool]:
+    original = source_path.read_bytes()
+    asset = _make_bounded_jpeg(original, max_size=ASSET_MAX_SIZE)
+    if asset is None:
+        suffix = source_path.suffix.lower()
+        if len(suffix) > 16 or not suffix.startswith("."):
+            suffix = ""
+        mime_type = mimetypes.guess_type(str(source_path))[0] or "application/octet-stream"
+        return original, suffix, mime_type, False
+    return asset[0], ".jpg", "image/jpeg", asset[1]
+
+
 def _content_block_image(source_path: Path) -> tuple[bytes, str, bool]:
     original = source_path.read_bytes()
-    preview = _make_content_preview(original)
+    preview = _make_bounded_jpeg(original, max_size=CONTENT_BLOCK_MAX_SIZE, max_bytes=CONTENT_BLOCK_MAX_BYTES)
     if preview is None:
         mime_type = mimetypes.guess_type(str(source_path))[0] or "application/octet-stream"
         return original, mime_type, False
-    return preview, "image/jpeg", True
+    return preview[0], "image/jpeg", True
 
 
-def _make_content_preview(data: bytes) -> bytes | None:
+def _make_bounded_jpeg(data: bytes, *, max_size: tuple[int, int], max_bytes: int | None = None) -> tuple[bytes, bool] | None:
     try:
         from PIL import Image, ImageOps
     except ImportError:
@@ -395,17 +409,21 @@ def _make_content_preview(data: bytes) -> bytes | None:
             image = ImageOps.exif_transpose(image)
             if image.mode not in {"RGB", "L"}:
                 image = image.convert("RGB")
+            original_size = image.size
             preview = image.copy()
-            preview.thumbnail(CONTENT_BLOCK_MAX_SIZE)
+            preview.thumbnail(max_size)
+            downsized = preview.size != original_size
+            if not downsized and (max_bytes is None or len(data) <= max_bytes):
+                return None
             best: bytes | None = None
             for quality in (85, 75, 65, 55):
                 output = io.BytesIO()
                 preview.save(output, format="JPEG", quality=quality, optimize=True)
                 candidate = output.getvalue()
                 best = candidate
-                if len(candidate) <= CONTENT_BLOCK_MAX_BYTES:
-                    return candidate
-            return best
+                if max_bytes is None or len(candidate) <= max_bytes:
+                    return candidate, downsized
+            return (best, downsized) if best is not None else None
     except Exception:
         return None
 

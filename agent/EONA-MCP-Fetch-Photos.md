@@ -48,8 +48,8 @@ when the MCP client is known to render MCP image content blocks reliably.
 
 ## Output
 
-Fetch returns temporary opaque asset URLs. Docker HTTP MCP returns `http://`
-asset URLs, such as:
+Fetch returns temporary opaque asset URLs. Image assets are bounded to 2400px on
+their longest side. Docker HTTP MCP returns `http://` asset URLs, such as:
 
 ```text
 http://localhost:8711/assets/<opaque-name>.jpg
@@ -68,7 +68,7 @@ fetch call and does not expose the source file path.
 When `include_content` is `true`, fetch also returns 1200px-bounded MCP `image`
 preview content blocks for clients that support them. Treat those blocks as an
 optional display path; the asset URL remains the stable retrieval contract for
-the full original.
+the fetched asset.
 
 ## Failure Handling
 
