@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import base64
+import mimetypes
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from .cli import EonaCliInvocationError, EonaCliRunner
@@ -14,6 +17,8 @@ QUERY_FORMAT_GUIDANCE = (
     "The query tool requires an Eona Query v1 plan with query_version=1, "
     "anchor={\"entity\":\"photo\"}, select, and supported entities/attributes/operators only."
 )
+DEFAULT_FETCH_MAX_BYTES = 12 * 1024 * 1024
+FETCH_MAX_PHOTOS = 4
 
 
 @dataclass(frozen=True)
@@ -60,6 +65,27 @@ class EonaMcpTools:
             {"name": f"{prefix}.reset", "description": "Reset this MCP project session without deleting source photos.", "inputSchema": {"type": "object", "required": ["confirm"], "properties": {"confirm": {"type": "boolean"}}, "additionalProperties": False}},
             {"name": f"{prefix}.refresh", "description": "Refresh all source roots in this MCP project session. Use only when the user explicitly asks to rescan/update existing photo metadata.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
             {"name": f"{prefix}.query", "description": "Query metadata and Cadis-enriched photo memory for this MCP project session.", "inputSchema": {"type": "object", "required": ["plan"], "properties": {"plan": {"type": "object"}, "in_sources": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": False}},
+            {
+                "name": f"{prefix}.fetch",
+                "description": "Fetch one or more indexed photos by EONA photo.id. Do not pass file paths.",
+                "inputSchema": {
+                    "type": "object",
+                    "required": ["photo_ids"],
+                    "properties": {
+                        "photo_ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "EONA photo.id values returned by the query tool.",
+                        },
+                        "max_bytes": {
+                            "type": "integer",
+                            "default": DEFAULT_FETCH_MAX_BYTES,
+                            "description": "Maximum bytes per photo to return.",
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+            },
         ]
 
     def call_tool(self, name: str, arguments: dict[str, Any] | None) -> dict[str, Any]:
@@ -82,6 +108,14 @@ class EonaMcpTools:
                             payload={"returncode": exc.returncode, "stdout": exc.stdout, "stderr": exc.stderr},
                         )
                     raise
+            if name == f"{prefix}.fetch":
+                photo_ids = _string_list(args.get("photo_ids"))
+                if not photo_ids:
+                    return _tool_error("`photo_ids` must include at least one EONA photo.id.")
+                if len(photo_ids) > FETCH_MAX_PHOTOS:
+                    return _tool_error(f"`photo_ids` may include at most {FETCH_MAX_PHOTOS} photo id(s) per fetch call.")
+                max_bytes = _positive_int(args.get("max_bytes"), DEFAULT_FETCH_MAX_BYTES)
+                return _fetch_photos(self, photo_ids=photo_ids, max_bytes=max_bytes)
             if name == f"{prefix}.append":
                 sources = _string_list(args.get("sources"))
                 if not sources:
@@ -177,3 +211,134 @@ def _looks_like_query_format_error(exc: EonaCliInvocationError) -> bool:
         "invalid",
     )
     return any(marker in text for marker in markers)
+
+
+def _positive_int(value: Any, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
+def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) -> dict[str, Any]:
+    allowed_roots = _allowed_source_roots(tools.config.sources)
+    if not allowed_roots:
+        return _tool_error("No configured EONA source roots are available for photo fetch.")
+    rows = _resolve_photo_paths(tools, photo_ids)
+    rows_by_id = {_row_value(row, "id"): row for row in rows if _row_value(row, "id")}
+    content: list[dict[str, Any]] = []
+    fetched: list[dict[str, Any]] = []
+    failed: list[dict[str, Any]] = []
+    for photo_id in photo_ids:
+        row = rows_by_id.get(photo_id)
+        if row is None:
+            failed.append({"photo_id": photo_id, "error": "Photo id was not found in this EONA project."})
+            continue
+        path_text = _row_value(row, "text") or _row_value(row, "path")
+        path = Path(path_text).expanduser() if path_text else None
+        if path is None or not path.is_file():
+            failed.append({"photo_id": photo_id, "error": "Resolved photo path is not readable."})
+            continue
+        resolved_path = path.resolve()
+        if not _path_under_any_root(resolved_path, allowed_roots):
+            failed.append({"photo_id": photo_id, "error": "Resolved photo path is outside configured source roots."})
+            continue
+        size = resolved_path.stat().st_size
+        if size > max_bytes:
+            failed.append({"photo_id": photo_id, "error": "Photo exceeds max_bytes.", "byte_size": size, "max_bytes": max_bytes})
+            continue
+        mime_type = mimetypes.guess_type(str(resolved_path))[0] or "application/octet-stream"
+        data = base64.b64encode(resolved_path.read_bytes()).decode("ascii")
+        content.append(
+            {
+                "type": "image",
+                "data": data,
+                "mimeType": mime_type,
+            }
+        )
+        fetched.append(
+            {
+                "photo_id": photo_id,
+                "content_id": _row_value(row, "content_id") or None,
+                "mime_type": mime_type,
+                "byte_size": size,
+            }
+        )
+    content.insert(
+        0,
+        {
+            "type": "text",
+            "text": json.dumps(
+                {
+                    "ok": not failed,
+                    "fetched": fetched,
+                    "failed": failed,
+                    "max_photos": FETCH_MAX_PHOTOS,
+                },
+                sort_keys=True,
+            ),
+        },
+    )
+    return {"content": content, "isError": bool(failed) and not fetched}
+
+
+def _resolve_photo_paths(tools: EonaMcpTools, photo_ids: list[str]) -> list[dict[str, Any]]:
+    plan = {
+        "query_version": 1,
+        "anchor": {"entity": "photo"},
+        "select": [
+            {"entity": "photo", "attribute": "id"},
+            {"entity": "photo", "attribute": "content_id"},
+            {"entity": "path", "attribute": "text"},
+        ],
+        "filters": [
+            {"entity": "photo", "attribute": "id", "operator": "in", "value": photo_ids},
+        ],
+        "limit": len(photo_ids),
+    }
+    payload = tools.runner.query(plan=plan)
+    result = payload.get("result")
+    rows = result.get("rows") if isinstance(result, dict) else payload.get("rows")
+    if not isinstance(rows, list):
+        return []
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def _allowed_source_roots(sources: tuple[str, ...]) -> list[Path]:
+    roots: list[Path] = []
+    for source in sources:
+        path = Path(source).expanduser()
+        if path.is_dir():
+            roots.append(path.resolve())
+        elif path.is_file():
+            roots.append(path.resolve().parent)
+    return roots
+
+
+def _path_under_any_root(path: Path, roots: list[Path]) -> bool:
+    for root in roots:
+        try:
+            path.relative_to(root)
+        except ValueError:
+            continue
+        return True
+    return False
+
+
+def _row_value(row: dict[str, Any], attribute: str) -> str:
+    candidate_keys = (
+        attribute,
+        f"photo.{attribute}",
+        f"photo_{attribute}",
+        f"path.{attribute}",
+        f"path_{attribute}",
+    )
+    for key in candidate_keys:
+        value = row.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    for key, value in row.items():
+        if str(key).endswith(attribute) and isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""

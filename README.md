@@ -126,9 +126,12 @@ eona.my-photos.list
 eona.my-photos.refresh
 eona.my-photos.reset
 eona.my-photos.query
+eona.my-photos.fetch
 ```
 
 The query tool executes an EONA Query v1 plan against the project's metadata index.
+The fetch tool retrieves indexed photos by `photo.id`; clients should not pass
+file paths.
 
 Agents should read:
 
