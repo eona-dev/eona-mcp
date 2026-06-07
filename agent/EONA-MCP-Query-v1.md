@@ -1,6 +1,6 @@
-# EONA Query v1
+# EONA MCP Query v1
 
-This guide is for Agents using **Eona Query v1**
+This guide is for Agents using **Eona MCP Query v1**
 
 ## Core Rule
 
@@ -126,12 +126,6 @@ Use `location.admin_label` and `location.admin_path` for below-country place que
 
 If a below-country query uses `location.admin_label`, `location.admin_path`, `location.admin_label_ml`, or `location.admin_names` without a positive `location.country` filter, EONA may return `LOCATION_COUNTRY_REQUIRED_FOR_ADMIN_QUERY` as a follow-up issue even when rows are returned. Treat this as an instruction that the place query is not country-scoped: when you can infer or know the country, rerun the same query with a `location.country` filter before giving a final answer. This protects ambiguous place names such as Cambridge, Paris, London, or Rotterdam from being treated as fully resolved just because some rows matched.
 
-### `path`
-
-- `text`: an observed source path associated with the photo, as indexed by EONA.
-
-Use `path.text` for fallback recall, filtering, or reporting where EONA observed a photo. Do not treat it as the stable contract for opening image bytes. When you need an actual local file path for display or downstream processing, resolve selected `photo.id` or `photo.content_id` values through the fetch surface for the runtime you are using.
-
 ## Supported Aggregations
 
 - `count`
@@ -162,7 +156,6 @@ Use `path.text` for fallback recall, filtering, or reporting where EONA observed
 - Use `camera_detail.*` only for detailed camera settings/lens questions.
 - Use `location.country` for country-level place questions.
 - Use `location.admin_label` for below-country place questions only when location semantic enhancement is available.
-- Use `path.text` only as a fallback recall query.
 - If the user asks in their own language, normalize place wording into the form most likely stored in Eona before querying.
 
 ## Query-Triggered Preparation

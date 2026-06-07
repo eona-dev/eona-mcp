@@ -145,7 +145,8 @@ Agents should read:
 eona://agent/how-to-query
 ```
 
-before issuing queries.
+before issuing queries. This resource is backed by
+`agent/EONA-MCP-Query-v1.md`.
 
 ---
 

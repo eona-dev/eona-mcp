@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Mapping
 
 PROJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
-DEFAULT_QUERY_RESOURCE_PATH = Path("agent/EONA-Query-v1.md")
+DEFAULT_QUERY_RESOURCE_PATH = Path("agent/EONA-MCP-Query-v1.md")
 
 
 class EonaMcpConfigError(ValueError):
