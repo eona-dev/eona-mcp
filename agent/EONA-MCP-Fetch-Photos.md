@@ -22,8 +22,8 @@ client retrieval contract.
 2. Select `photo.id` values from the query result.
 3. Call the EONA fetch tool with `photo_ids`.
 4. Show the fetched image content to the user.
-5. Include returned asset URLs only as fallback links when inline rendering is
-   unavailable.
+5. Include returned asset URLs as fallback links, or when the user needs the
+   full-size original.
 
 Default to a small sample:
 
@@ -46,20 +46,20 @@ selected photo exceeds the current byte limit.
 
 ## HTTP MCP Output
 
-For HTTP MCP, fetch returns image content directly through MCP and may also
-return temporary asset URLs such as:
+For HTTP MCP, fetch returns bounded inline image content for display and may
+also return temporary asset URLs for the full-size original, such as:
 
 ```text
 http://localhost:8711/assets/<opaque-name>.jpg
 ```
 
-Use the image content for inline display. Use URLs as fallback links only. The
-URL is minted by an authenticated MCP fetch call and does not expose the source
-file path.
+Use the image content for inline display. Use URLs as fallback links or for
+full-size originals. The URL is minted by an authenticated MCP fetch call and
+does not expose the source file path.
 
 ## Stdio MCP Output
 
-For stdio MCP, fetch returns image content directly through MCP.
+For stdio MCP, fetch returns bounded image content directly through MCP.
 
 ## Failure Handling
 
