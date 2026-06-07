@@ -108,6 +108,11 @@ indexing, EONA MCP asks EONA CLI for the indexed countries, then warms
 `location.admin_path` per country so agent queries do not trigger long Cadis
 preparation work. Set `EONA_MCP_HTTP_PREPARE_LOCATION=0` to skip this warm-up.
 
+HTTP fetch publishes requested photos as temporary assets under `/workspace/assets`
+and returns URLs such as `http://localhost:8711/assets/<opaque-name>.jpg`.
+The MCP endpoint still requires the bearer token; asset URLs are minted only by
+authenticated fetch calls and do not expose source file paths.
+
 ---
 
 ## MCP Tools
@@ -131,7 +136,8 @@ eona.my-photos.fetch
 
 The query tool executes an EONA Query v1 plan against the project's metadata index.
 The fetch tool retrieves indexed photos by `photo.id`; clients should not pass
-file paths.
+file paths. HTTP MCP returns temporary asset URLs for fetched photos; stdio MCP
+returns image content directly.
 
 Agents should read:
 

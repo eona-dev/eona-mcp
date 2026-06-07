@@ -4,6 +4,8 @@ from __future__ import annotations
 import base64
 import mimetypes
 import json
+import secrets
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -249,22 +251,25 @@ def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) 
             failed.append({"photo_id": photo_id, "error": "Photo exceeds max_bytes.", "byte_size": size, "max_bytes": max_bytes})
             continue
         mime_type = mimetypes.guess_type(str(resolved_path))[0] or "application/octet-stream"
-        data = base64.b64encode(resolved_path.read_bytes()).decode("ascii")
-        content.append(
-            {
-                "type": "image",
-                "data": data,
-                "mimeType": mime_type,
-            }
-        )
-        fetched.append(
-            {
-                "photo_id": photo_id,
-                "content_id": _row_value(row, "content_id") or None,
-                "mime_type": mime_type,
-                "byte_size": size,
-            }
-        )
+        item = {
+            "photo_id": photo_id,
+            "content_id": _row_value(row, "content_id") or None,
+            "mime_type": mime_type,
+            "byte_size": size,
+        }
+        asset = _publish_asset(tools, source_path=resolved_path)
+        if asset is not None:
+            item.update(asset)
+        else:
+            data = base64.b64encode(resolved_path.read_bytes()).decode("ascii")
+            content.append(
+                {
+                    "type": "image",
+                    "data": data,
+                    "mimeType": mime_type,
+                }
+            )
+        fetched.append(item)
     content.insert(
         0,
         {
@@ -281,6 +286,24 @@ def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) 
         },
     )
     return {"content": content, "isError": bool(failed) and not fetched}
+
+
+def _publish_asset(tools: EonaMcpTools, *, source_path: Path) -> dict[str, str] | None:
+    asset_base_url = str(tools.config.asset_base_url or "").strip().rstrip("/")
+    asset_dir = tools.config.asset_dir
+    if not asset_base_url or asset_dir is None:
+        return None
+    asset_dir.mkdir(parents=True, exist_ok=True)
+    suffix = source_path.suffix.lower()
+    if len(suffix) > 16 or not suffix.startswith("."):
+        suffix = ""
+    filename = f"{secrets.token_urlsafe(24)}{suffix}"
+    asset_path = asset_dir / filename
+    shutil.copyfile(source_path, asset_path)
+    return {
+        "asset_path": str(asset_path),
+        "url": f"{asset_base_url}/{filename}",
+    }
 
 
 def _resolve_photo_paths(tools: EonaMcpTools, photo_ids: list[str]) -> list[dict[str, Any]]:

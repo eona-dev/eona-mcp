@@ -28,6 +28,8 @@ class EonaMcpConfig:
     startup_required: bool = True
     project_tools_enabled: bool = False
     query_resource_path: Path = DEFAULT_QUERY_RESOURCE_PATH
+    asset_dir: Path | None = None
+    asset_base_url: str | None = None
 
     @property
     def tool_prefix(self) -> str:
@@ -57,6 +59,11 @@ def load_config(env: Mapping[str, str] | None = None) -> EonaMcpConfig:
             env_key="EONA_QUERY_RESOURCE_PATH",
             default_path=DEFAULT_QUERY_RESOURCE_PATH,
         ),
+        asset_dir=_optional_path(
+            values.get("EONA_MCP_ASSET_DIR"),
+            default=workspace / "assets",
+        ),
+        asset_base_url=_optional_text(values.get("EONA_MCP_ASSET_BASE_URL")),
     )
 
 
@@ -90,6 +97,13 @@ def _parse_bool(value: str) -> bool:
 def _optional_text(value: str | None) -> str | None:
     normalized = str(value or "").strip()
     return normalized or None
+
+
+def _optional_path(value: str | None, *, default: Path | None = None) -> Path | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return default
+    return Path(raw).expanduser().resolve()
 
 
 def _resource_path(values: Mapping[str, str], *, env_key: str, default_path: Path) -> Path:

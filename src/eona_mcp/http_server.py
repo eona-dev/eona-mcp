@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 import os
 import secrets
 import sys
@@ -9,7 +10,7 @@ from dataclasses import dataclass, replace
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from .config import EonaMcpConfigError, load_config
 from .server import handle_request
@@ -138,6 +139,8 @@ def _handler_class(*, tools: EonaMcpTools, config: EonaMcpHttpConfig) -> type[Ba
             self._send_json(HTTPStatus.OK, response, protocol_version=protocol_version)
 
         def do_GET(self) -> None:  # noqa: N802 - stdlib handler method name.
+            if self._serve_asset_if_matched():
+                return
             if not self._request_allowed():
                 return
             if not self._path_matches():
@@ -158,6 +161,35 @@ def _handler_class(*, tools: EonaMcpTools, config: EonaMcpHttpConfig) -> type[Ba
             self.send_header("Allow", "POST")
             self.send_header("Content-Length", "0")
             self.end_headers()
+
+        def _serve_asset_if_matched(self) -> bool:
+            request_path = urlsplit(self.path).path
+            if not request_path.startswith("/assets/"):
+                return False
+            filename = unquote(request_path.removeprefix("/assets/"))
+            if "/" in filename or "\\" in filename or not filename:
+                self._send_json(HTTPStatus.NOT_FOUND, _jsonrpc_error(None, -32004, "Asset not found."))
+                return True
+            asset_dir = tools.config.asset_dir
+            if asset_dir is None:
+                self._send_json(HTTPStatus.NOT_FOUND, _jsonrpc_error(None, -32004, "Asset not found."))
+                return True
+            asset_path = (asset_dir / filename).resolve()
+            try:
+                asset_path.relative_to(asset_dir.resolve())
+            except ValueError:
+                self._send_json(HTTPStatus.NOT_FOUND, _jsonrpc_error(None, -32004, "Asset not found."))
+                return True
+            if not asset_path.is_file():
+                self._send_json(HTTPStatus.NOT_FOUND, _jsonrpc_error(None, -32004, "Asset not found."))
+                return True
+            body = asset_path.read_bytes()
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", mimetypes.guess_type(str(asset_path))[0] or "application/octet-stream")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return True
 
         def _path_matches(self) -> bool:
             return urlsplit(self.path).path == config.path
