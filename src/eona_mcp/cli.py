@@ -40,12 +40,18 @@ class EonaCliRunner:
             command.append("--refresh")
         return self._run_json(command, stream_stderr=stream_stderr)
 
-    def query(self, *, plan: dict[str, Any], in_sources: list[str] | tuple[str, ...] | None = None) -> dict[str, Any]:
+    def query(
+        self,
+        *,
+        plan: dict[str, Any],
+        in_sources: list[str] | tuple[str, ...] | None = None,
+        stream_stderr: bool = False,
+    ) -> dict[str, Any]:
         command = self._base_command("query")
         command.extend(["--input", "-"])
         for source in _source_args(in_sources or ()):
             command.extend(["--in-source", source])
-        payload = self._run_json(command, stdin=json.dumps(plan, separators=(",", ":")))
+        payload = self._run_json(command, stdin=json.dumps(plan, separators=(",", ":")), stream_stderr=stream_stderr)
         return _inline_query_artifact(payload)
 
     def reset_session(self) -> dict[str, Any]:

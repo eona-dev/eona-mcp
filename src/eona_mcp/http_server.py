@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 
 from .config import EonaMcpConfigError, load_config
 from .server import handle_request
-from .startup import run_startup_add
+from .startup import run_startup_add, run_startup_location_warmup
 from .tools import EonaMcpTools
 
 DEFAULT_PROTOCOL_VERSION = "2025-03-26"
@@ -27,6 +27,7 @@ class EonaMcpHttpConfig:
     path: str
     bearer_token: str | None
     allowed_origins: tuple[str, ...]
+    prepare_location: bool
 
 
 def main() -> int:
@@ -34,6 +35,8 @@ def main() -> int:
         mcp_config = load_config()
         http_config = load_http_config()
         run_startup_add(mcp_config)
+        if http_config.prepare_location:
+            run_startup_location_warmup(mcp_config)
     except (EonaMcpConfigError, RuntimeError, ValueError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True), file=sys.stderr)
         return 1
@@ -65,6 +68,7 @@ def load_http_config(env: dict[str, str] | None = None) -> EonaMcpHttpConfig:
         path=path,
         bearer_token=bearer_token,
         allowed_origins=allowed_origins,
+        prepare_location=_parse_bool(values.get("EONA_MCP_HTTP_PREPARE_LOCATION", "1")),
     )
 
 
@@ -199,6 +203,10 @@ def _origin_allowed(origin: str, *, config: EonaMcpHttpConfig) -> bool:
         parsed = urlsplit(origin)
         return parsed.hostname in {"localhost", "127.0.0.1", "::1"}
     return False
+
+
+def _parse_bool(value: str) -> bool:
+    return str(value).strip().lower() not in {"0", "false", "no", "off"}
 
 
 def _jsonrpc_error(request_id: Any, code: int, message: str) -> dict[str, Any]:

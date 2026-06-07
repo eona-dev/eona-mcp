@@ -103,6 +103,11 @@ workspace volume; each container stores its index under its own `/workspace`.
 Removing a container removes its indexed data. Photo folders are mounted
 read-only at `/photos`.
 
+HTTP MCP startup prepares location data before listening by default. After
+indexing, EONA MCP asks EONA CLI for the indexed countries, then warms
+`location.admin_path` per country so agent queries do not trigger long Cadis
+preparation work. Set `EONA_MCP_HTTP_PREPARE_LOCATION=0` to skip this warm-up.
+
 ---
 
 ## MCP Tools
