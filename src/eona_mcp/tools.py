@@ -291,15 +291,14 @@ def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) 
         asset = _publish_asset(tools, source_path=resolved_path)
         if asset is not None:
             item.update(asset)
-        else:
-            data = base64.b64encode(resolved_path.read_bytes()).decode("ascii")
-            content.append(
-                {
-                    "type": "image",
-                    "data": data,
-                    "mimeType": mime_type,
-                }
-            )
+        data = base64.b64encode(resolved_path.read_bytes()).decode("ascii")
+        content.append(
+            {
+                "type": "image",
+                "data": data,
+                "mimeType": mime_type,
+            }
+        )
         fetched.append(item)
     content.insert(
         0,
