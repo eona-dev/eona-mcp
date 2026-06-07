@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-import base64
-import io
 import mimetypes
 import json
 import secrets
@@ -10,6 +8,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from .cli import EonaCliInvocationError, EonaCliRunner
 from .config import EonaMcpConfig
@@ -26,8 +25,6 @@ FETCH_FORMAT_GUIDANCE = (
     "The fetch tool requires EONA photo.id values in `photo_ids`; never pass source file paths."
 )
 DEFAULT_FETCH_MAX_BYTES = 12 * 1024 * 1024
-INLINE_IMAGE_MAX_BYTES = 1_500_000
-INLINE_IMAGE_MAX_SIZE = (1600, 1600)
 FETCH_MAX_PHOTOS = 4
 
 
@@ -295,25 +292,8 @@ def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) 
         if asset is not None:
             item.update(asset)
         else:
-            inline_data, inline_mime_type, inline_byte_size, inline_preview = _read_inline_image(
-                resolved_path,
-                mime_type=mime_type,
-            )
-            item.update(
-                {
-                    "inline_mime_type": inline_mime_type,
-                    "inline_byte_size": inline_byte_size,
-                    "inline_preview": inline_preview,
-                }
-            )
-            data = base64.b64encode(inline_data).decode("ascii")
-            content.append(
-                {
-                    "type": "image",
-                    "data": data,
-                    "mimeType": inline_mime_type,
-                }
-            )
+            failed.append({"photo_id": photo_id, "error": "No EONA asset directory is configured for photo fetch."})
+            continue
         fetched.append(item)
     content.insert(
         0,
@@ -336,7 +316,7 @@ def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) 
 def _publish_asset(tools: EonaMcpTools, *, source_path: Path) -> dict[str, str] | None:
     asset_base_url = str(tools.config.asset_base_url or "").strip().rstrip("/")
     asset_dir = tools.config.asset_dir
-    if not asset_base_url or asset_dir is None:
+    if asset_dir is None:
         return None
     asset_dir.mkdir(parents=True, exist_ok=True)
     suffix = source_path.suffix.lower()
@@ -345,46 +325,15 @@ def _publish_asset(tools: EonaMcpTools, *, source_path: Path) -> dict[str, str] 
     filename = f"{secrets.token_urlsafe(24)}{suffix}"
     asset_path = asset_dir / filename
     shutil.copyfile(source_path, asset_path)
+    url = f"{asset_base_url}/{filename}" if asset_base_url else _file_url(asset_path)
     return {
         "asset_path": str(asset_path),
-        "url": f"{asset_base_url}/{filename}",
+        "url": url,
     }
 
 
-def _read_inline_image(source_path: Path, *, mime_type: str) -> tuple[bytes, str, int, bool]:
-    original = source_path.read_bytes()
-    if len(original) <= INLINE_IMAGE_MAX_BYTES:
-        return original, mime_type, len(original), False
-    preview = _make_inline_preview(original)
-    if preview is None:
-        return original, mime_type, len(original), False
-    return preview, "image/jpeg", len(preview), True
-
-
-def _make_inline_preview(data: bytes) -> bytes | None:
-    try:
-        from PIL import Image, ImageOps
-    except ImportError:
-        return None
-    try:
-        with Image.open(io.BytesIO(data)) as image:
-            image = ImageOps.exif_transpose(image)
-            if image.mode not in {"RGB", "L"}:
-                image = image.convert("RGB")
-            best: bytes | None = None
-            for max_size in (INLINE_IMAGE_MAX_SIZE, (1200, 1200), (900, 900)):
-                preview = image.copy()
-                preview.thumbnail(max_size)
-                for quality in (85, 75, 65, 55):
-                    output = io.BytesIO()
-                    preview.save(output, format="JPEG", quality=quality, optimize=True)
-                    candidate = output.getvalue()
-                    best = candidate
-                    if len(candidate) <= INLINE_IMAGE_MAX_BYTES:
-                        return candidate
-            return best
-    except Exception:
-        return None
+def _file_url(path: Path) -> str:
+    return "file://" + quote(str(path.resolve()))
 
 
 def _resolve_photo_paths(tools: EonaMcpTools, photo_ids: list[str]) -> list[dict[str, Any]]:

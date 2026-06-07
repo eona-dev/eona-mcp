@@ -110,8 +110,9 @@ preparation work. Set `EONA_MCP_HTTP_PREPARE_LOCATION=0` to skip this warm-up.
 
 HTTP fetch publishes requested originals as temporary assets under
 `/workspace/assets`, with URLs such as
-`http://localhost:8711/assets/<opaque-name>.jpg`. The MCP endpoint still requires
-the bearer token; asset URLs are minted only by authenticated fetch calls and do
+`http://localhost:8711/assets/<opaque-name>.jpg`. Stdio fetch uses the same
+opaque asset boundary and returns `file://` URLs under the EONA MCP workspace
+assets directory. Asset URLs are minted only by authenticated fetch calls and do
 not expose source file paths.
 
 ---
@@ -137,8 +138,8 @@ eona.my-photos.fetch
 
 The query tool executes an EONA Query v1 plan against the project's metadata index.
 The fetch tool retrieves indexed photos by `photo.id`; clients should not pass
-file paths. HTTP MCP returns temporary asset URLs; stdio MCP returns bounded
-image content directly.
+file paths. HTTP MCP returns `http://` asset URLs; stdio MCP returns `file://`
+asset URLs.
 
 Agents should read:
 

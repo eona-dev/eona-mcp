@@ -21,8 +21,7 @@ client retrieval contract.
 1. Use the EONA query tool to find a small candidate set.
 2. Select `photo.id` values from the query result.
 3. Call the EONA fetch tool with `photo_ids`.
-4. For HTTP MCP, show the returned asset URLs as links.
-5. For stdio MCP, show the returned image content.
+4. Show the returned asset URLs as links.
 
 Default to a small sample:
 
@@ -43,21 +42,24 @@ Do not fetch an unbounded result set.
 `max_bytes` is optional. Increase it only when the first fetch reports that a
 selected photo exceeds the current byte limit.
 
-## HTTP MCP Output
+## Output
 
-For HTTP MCP, fetch returns temporary asset URLs, such as:
+Fetch returns temporary opaque asset URLs. Docker HTTP MCP returns `http://`
+asset URLs, such as:
 
 ```text
 http://localhost:8711/assets/<opaque-name>.jpg
 ```
 
+Stdio MCP returns `file://` asset URLs, such as:
+
+```text
+file:///Users/example/.eona/workspace/assets/<opaque-name>.jpg
+```
+
 Use URLs as links. Do not promise that MCP inline image blocks or Markdown image
 embedding will display in the chat UI. The URL is minted by an authenticated MCP
 fetch call and does not expose the source file path.
-
-## Stdio MCP Output
-
-For stdio MCP, fetch returns bounded image content directly through MCP.
 
 ## Failure Handling
 
