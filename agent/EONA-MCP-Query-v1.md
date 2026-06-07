@@ -13,7 +13,7 @@ You own:
 That means:
 
 - the user should ask the question in natural language
-- you should convert that into Eona Query v1 JSON
+- you should convert that into EONA MCP Query v1 JSON
 - you should run the query and explain the result
 - you should not offload the planning step back to the user
 - you should answer like a helpful operator, not like a protocol designer
@@ -25,9 +25,9 @@ Eona owns:
 - on-demand source preparation
 - on-demand semantic preparation
 
-Do not write SQL. Stay inside the supported Eona Query v1 vocabulary.
+Do not write SQL. Stay inside the supported EONA MCP Query v1 vocabulary.
 
-## Eona Query v1
+## EONA MCP Query v1
 
 Always send a single JSON object with:
 
@@ -375,6 +375,6 @@ If the user asks for unsupported semantics:
 
 Your job is:
 
-- plan Eona Query v1 JSON
+- plan EONA MCP Query v1 JSON
 - interpret the structured result
 - answer the user clearly

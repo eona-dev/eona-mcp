@@ -35,7 +35,7 @@ class EonaMcpConfig:
 
     @property
     def tool_prefix(self) -> str:
-        return f"eona.{self.project_id}"
+        return f"eona-mcp.{self.project_id}"
 
 
 def load_config(env: Mapping[str, str] | None = None) -> EonaMcpConfig:

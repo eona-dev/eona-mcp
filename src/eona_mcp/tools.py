@@ -17,7 +17,7 @@ QUERY_GUIDE_URI = "eona://agent/how-to-query"
 FETCH_GUIDE_URI = "eona://agent/how-to-fetch-photos"
 QUERY_FORMAT_GUIDANCE = (
     "Please read MCP resource eona://agent/how-to-query before retrying. "
-    "The query tool requires an Eona Query v1 plan with query_version=1, "
+    "The query tool requires an EONA MCP Query v1 plan with query_version=1, "
     "anchor={\"entity\":\"photo\"}, select, and supported entities/attributes/operators only."
 )
 FETCH_FORMAT_GUIDANCE = (
@@ -71,7 +71,15 @@ class EonaMcpTools:
             {"name": f"{prefix}.list", "description": "List source folders in this MCP project session.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
             {"name": f"{prefix}.reset", "description": "Reset this MCP project session without deleting source photos.", "inputSchema": {"type": "object", "required": ["confirm"], "properties": {"confirm": {"type": "boolean"}}, "additionalProperties": False}},
             {"name": f"{prefix}.refresh", "description": "Refresh all source folders in this MCP project session. Use only when the user explicitly asks to rescan/update existing photo metadata.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
-            {"name": f"{prefix}.query", "description": "Query metadata and Cadis-enriched photo memory for this MCP project session.", "inputSchema": {"type": "object", "required": ["plan"], "properties": {"plan": {"type": "object"}, "in_sources": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": False}},
+            {
+                "name": f"{prefix}.query",
+                "description": (
+                    "Query metadata and Cadis-enriched photo memory for this MCP project session. "
+                    "Read resource eona://agent/how-to-query before calling this tool. "
+                    "The `plan` argument must be an EONA MCP Query v1 JSON plan, not natural language."
+                ),
+                "inputSchema": {"type": "object", "required": ["plan"], "properties": {"plan": {"type": "object"}, "in_sources": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": False},
+            },
             {
                 "name": f"{prefix}.fetch",
                 "description": (

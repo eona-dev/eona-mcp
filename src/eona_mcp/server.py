@@ -96,7 +96,7 @@ def _query_guide_resource(tools: EonaMcpTools) -> dict[str, Any]:
         "name": "How to Query with Eona",
         "description": (
             "Required guide for translating natural-language photo-library questions into "
-            "Eona Query v1 JSON plans."
+            "EONA MCP Query v1 JSON plans."
             f"{project_context} "
             "Read this before calling the EONA query tool; prefer "
             "the tool over filesystem searches for indexed photos."

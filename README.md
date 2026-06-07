@@ -128,15 +128,15 @@ my-photos
 exposes:
 
 ```text
-eona.my-photos.append
-eona.my-photos.list
-eona.my-photos.refresh
-eona.my-photos.reset
-eona.my-photos.query
-eona.my-photos.fetch
+eona-mcp.my-photos.append
+eona-mcp.my-photos.list
+eona-mcp.my-photos.refresh
+eona-mcp.my-photos.reset
+eona-mcp.my-photos.query
+eona-mcp.my-photos.fetch
 ```
 
-The query tool executes an EONA Query v1 plan against the project's metadata index.
+The query tool executes an EONA MCP Query v1 plan against the project's metadata index.
 The fetch tool retrieves indexed photos by `photo.id`; clients should not pass
 file paths. HTTP MCP returns `http://` asset URLs; stdio MCP returns `file://`
 asset URLs.
@@ -159,7 +159,7 @@ agent/EONA-MCP-Fetch-Photos.md
 
 ## EONA CLI
 
-`eona-cli` is the local EONA runtime used by `eona-mcp` to index photo folders, maintain project sessions, and execute EONA Query v1 plans.
+`eona-cli` is the local EONA runtime used by `eona-mcp` to index photo folders, maintain project sessions, and execute EONA MCP Query v1 plans.
 
 Repository:
 
