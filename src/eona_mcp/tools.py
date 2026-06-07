@@ -14,10 +14,15 @@ from .cli import EonaCliInvocationError, EonaCliRunner
 from .config import EonaMcpConfig
 
 QUERY_GUIDE_URI = "eona://agent/how-to-query"
+FETCH_GUIDE_URI = "eona://agent/how-to-fetch-photos"
 QUERY_FORMAT_GUIDANCE = (
     "Please read MCP resource eona://agent/how-to-query before retrying. "
     "The query tool requires an Eona Query v1 plan with query_version=1, "
     "anchor={\"entity\":\"photo\"}, select, and supported entities/attributes/operators only."
+)
+FETCH_FORMAT_GUIDANCE = (
+    "Please read MCP resource eona://agent/how-to-fetch-photos before retrying. "
+    "The fetch tool requires EONA photo.id values in `photo_ids`; never pass source file paths."
 )
 DEFAULT_FETCH_MAX_BYTES = 12 * 1024 * 1024
 FETCH_MAX_PHOTOS = 4
@@ -69,7 +74,11 @@ class EonaMcpTools:
             {"name": f"{prefix}.query", "description": "Query metadata and Cadis-enriched photo memory for this MCP project session.", "inputSchema": {"type": "object", "required": ["plan"], "properties": {"plan": {"type": "object"}, "in_sources": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": False}},
             {
                 "name": f"{prefix}.fetch",
-                "description": "Fetch one or more indexed photos by EONA photo.id. Do not pass file paths.",
+                "description": (
+                    "Fetch one or more indexed photos by EONA photo.id. "
+                    "Read resource eona://agent/how-to-fetch-photos before calling this tool. "
+                    "Do not pass file paths."
+                ),
                 "inputSchema": {
                     "type": "object",
                     "required": ["photo_ids"],
@@ -113,9 +122,11 @@ class EonaMcpTools:
             if name == f"{prefix}.fetch":
                 photo_ids = _string_list(args.get("photo_ids"))
                 if not photo_ids:
-                    return _tool_error("`photo_ids` must include at least one EONA photo.id.")
+                    return _fetch_format_error("`photo_ids` must include at least one EONA photo.id.")
+                if _looks_like_path_values(photo_ids):
+                    return _fetch_format_error("`photo_ids` must contain EONA photo.id values, not file paths.")
                 if len(photo_ids) > FETCH_MAX_PHOTOS:
-                    return _tool_error(f"`photo_ids` may include at most {FETCH_MAX_PHOTOS} photo id(s) per fetch call.")
+                    return _fetch_format_error(f"`photo_ids` may include at most {FETCH_MAX_PHOTOS} photo id(s) per fetch call.")
                 max_bytes = _positive_int(args.get("max_bytes"), DEFAULT_FETCH_MAX_BYTES)
                 return _fetch_photos(self, photo_ids=photo_ids, max_bytes=max_bytes)
             if name == f"{prefix}.append":
@@ -179,6 +190,16 @@ def _query_format_error(message: str, *, payload: dict[str, Any] | None = None) 
     return _tool_error(f"{message} {QUERY_FORMAT_GUIDANCE}", payload=body)
 
 
+def _fetch_format_error(message: str, *, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    body = {
+        "fetch_resource_uri": FETCH_GUIDE_URI,
+        "retry_instruction": FETCH_FORMAT_GUIDANCE,
+    }
+    if payload:
+        body.update(payload)
+    return _tool_error(f"{message} {FETCH_FORMAT_GUIDANCE}", payload=body)
+
+
 def _validate_query_plan_shape(plan: dict[str, Any]) -> str | None:
     if plan.get("query_version") != 1:
         return "`plan.query_version` must be 1."
@@ -221,6 +242,16 @@ def _positive_int(value: Any, default: int) -> int:
     except (TypeError, ValueError):
         return default
     return parsed if parsed > 0 else default
+
+
+def _looks_like_path_values(values: list[str]) -> bool:
+    return any(
+        "/" in value
+        or "\\" in value
+        or value.startswith(".")
+        or value.startswith("~")
+        for value in values
+    )
 
 
 def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) -> dict[str, Any]:

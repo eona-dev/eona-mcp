@@ -143,10 +143,15 @@ Agents should read:
 
 ```text
 eona://agent/how-to-query
+eona://agent/how-to-fetch-photos
 ```
 
-before issuing queries. This resource is backed by
-`agent/EONA-MCP-Query-v1.md`.
+before issuing queries or fetching photos. These resources are backed by:
+
+```text
+agent/EONA-MCP-Query-v1.md
+agent/EONA-MCP-Fetch-Photos.md
+```
 
 ---
 

@@ -10,6 +10,7 @@ from typing import Mapping
 
 PROJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 DEFAULT_QUERY_RESOURCE_PATH = Path("agent/EONA-MCP-Query-v1.md")
+DEFAULT_FETCH_RESOURCE_PATH = Path("agent/EONA-MCP-Fetch-Photos.md")
 
 
 class EonaMcpConfigError(ValueError):
@@ -28,6 +29,7 @@ class EonaMcpConfig:
     startup_required: bool = True
     project_tools_enabled: bool = False
     query_resource_path: Path = DEFAULT_QUERY_RESOURCE_PATH
+    fetch_resource_path: Path = DEFAULT_FETCH_RESOURCE_PATH
     asset_dir: Path | None = None
     asset_base_url: str | None = None
 
@@ -58,6 +60,11 @@ def load_config(env: Mapping[str, str] | None = None) -> EonaMcpConfig:
             values,
             env_key="EONA_QUERY_RESOURCE_PATH",
             default_path=DEFAULT_QUERY_RESOURCE_PATH,
+        ),
+        fetch_resource_path=_resource_path(
+            values,
+            env_key="EONA_FETCH_RESOURCE_PATH",
+            default_path=DEFAULT_FETCH_RESOURCE_PATH,
         ),
         asset_dir=_optional_path(
             values.get("EONA_MCP_ASSET_DIR"),

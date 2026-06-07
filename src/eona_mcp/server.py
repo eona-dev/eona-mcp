@@ -11,6 +11,7 @@ from .tools import EonaMcpTools
 
 JSONRPC_VERSION = "2.0"
 QUERY_GUIDE_URI = "eona://agent/how-to-query"
+FETCH_GUIDE_URI = "eona://agent/how-to-fetch-photos"
 
 
 def main() -> int:
@@ -61,11 +62,13 @@ def handle_request(tools: EonaMcpTools, request: dict[str, Any]) -> dict[str, An
         arguments = params.get("arguments") if isinstance(params.get("arguments"), dict) else {}
         return _result_response(request_id, tools.call_tool(tool_name, arguments))
     if method == "resources/list":
-        return _result_response(request_id, {"resources": [_query_guide_resource(tools)]})
+        return _result_response(request_id, {"resources": [_query_guide_resource(tools), _fetch_guide_resource(tools)]})
     if method == "resources/read":
         uri = str(params.get("uri") or "")
         if uri == QUERY_GUIDE_URI:
             return _result_response(request_id, {"contents": [_read_query_guide(tools)]})
+        if uri == FETCH_GUIDE_URI:
+            return _result_response(request_id, {"contents": [_read_fetch_guide(tools)]})
         return _error_response(request_id, -32602, f"Unknown resource: {uri}")
     if method == "ping":
         return _result_response(request_id, {})
@@ -102,11 +105,38 @@ def _query_guide_resource(tools: EonaMcpTools) -> dict[str, Any]:
     }
 
 
+def _fetch_guide_resource(tools: EonaMcpTools) -> dict[str, Any]:
+    project_context = ""
+    if tools.config.project_description:
+        project_context = f" Project context: {tools.config.project_description.strip().rstrip('.')}."
+    return {
+        "uri": FETCH_GUIDE_URI,
+        "name": "How to Fetch Photos with Eona MCP",
+        "description": (
+            "Required guide for showing or sending EONA photos through MCP. "
+            "Read this before calling the EONA fetch tool; use photo.id values, "
+            "never source file paths."
+            f"{project_context}"
+        ),
+        "mimeType": "text/markdown",
+    }
+
+
 def _read_query_guide(tools: EonaMcpTools) -> dict[str, Any]:
     path = tools.config.query_resource_path
     text = path.read_text(encoding="utf-8")
     return {
         "uri": QUERY_GUIDE_URI,
+        "mimeType": "text/markdown",
+        "text": text,
+    }
+
+
+def _read_fetch_guide(tools: EonaMcpTools) -> dict[str, Any]:
+    path = tools.config.fetch_resource_path
+    text = path.read_text(encoding="utf-8")
+    return {
+        "uri": FETCH_GUIDE_URI,
         "mimeType": "text/markdown",
         "text": text,
     }
