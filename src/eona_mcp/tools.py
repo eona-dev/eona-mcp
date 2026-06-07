@@ -68,9 +68,9 @@ class EonaMcpTools:
                     "additionalProperties": False,
                 },
             },
-            {"name": f"{prefix}.list", "description": "List source roots in this MCP project session.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
+            {"name": f"{prefix}.list", "description": "List source folders in this MCP project session.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
             {"name": f"{prefix}.reset", "description": "Reset this MCP project session without deleting source photos.", "inputSchema": {"type": "object", "required": ["confirm"], "properties": {"confirm": {"type": "boolean"}}, "additionalProperties": False}},
-            {"name": f"{prefix}.refresh", "description": "Refresh all source roots in this MCP project session. Use only when the user explicitly asks to rescan/update existing photo metadata.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
+            {"name": f"{prefix}.refresh", "description": "Refresh all source folders in this MCP project session. Use only when the user explicitly asks to rescan/update existing photo metadata.", "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}},
             {"name": f"{prefix}.query", "description": "Query metadata and Cadis-enriched photo memory for this MCP project session.", "inputSchema": {"type": "object", "required": ["plan"], "properties": {"plan": {"type": "object"}, "in_sources": {"type": "array", "items": {"type": "string"}}}, "additionalProperties": False}},
             {
                 "name": f"{prefix}.fetch",
@@ -255,9 +255,9 @@ def _looks_like_path_values(values: list[str]) -> bool:
 
 
 def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) -> dict[str, Any]:
-    allowed_roots = _allowed_source_roots(tools.config.sources)
+    allowed_roots = _allowed_source_roots(tools)
     if not allowed_roots:
-        return _tool_error("No configured EONA source roots are available for photo fetch.")
+        return _tool_error("No readable configured or indexed EONA source folders are available for photo fetch.")
     rows = _resolve_photo_paths(tools, photo_ids)
     rows_by_id = {_row_value(row, "id"): row for row in rows if _row_value(row, "id")}
     content: list[dict[str, Any]] = []
@@ -275,7 +275,7 @@ def _fetch_photos(tools: EonaMcpTools, *, photo_ids: list[str], max_bytes: int) 
             continue
         resolved_path = path.resolve()
         if not _path_under_any_root(resolved_path, allowed_roots):
-            failed.append({"photo_id": photo_id, "error": "Resolved photo path is outside configured source roots."})
+            failed.append({"photo_id": photo_id, "error": "Resolved photo path is outside configured or indexed source folders."})
             continue
         size = resolved_path.stat().st_size
         if size > max_bytes:
@@ -358,15 +358,49 @@ def _resolve_photo_paths(tools: EonaMcpTools, photo_ids: list[str]) -> list[dict
     return [row for row in rows if isinstance(row, dict)]
 
 
-def _allowed_source_roots(sources: tuple[str, ...]) -> list[Path]:
+def _allowed_source_roots(tools: EonaMcpTools) -> list[Path]:
     roots: list[Path] = []
-    for source in sources:
-        path = Path(source).expanduser()
-        if path.is_dir():
-            roots.append(path.resolve())
-        elif path.is_file():
-            roots.append(path.resolve().parent)
+    seen: set[Path] = set()
+    for source in [*tools.config.sources, *_session_source_roots(tools.runner)]:
+        root = _readable_source_root(source)
+        if root is None or root in seen:
+            continue
+        roots.append(root)
+        seen.add(root)
     return roots
+
+
+def _session_source_roots(runner: EonaCliRunner) -> list[str]:
+    try:
+        payload = runner.list_session_sources()
+    except (FileNotFoundError, EonaCliInvocationError):
+        return []
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        return []
+    source_roots = result.get("source_roots")
+    if isinstance(source_roots, list):
+        return [str(root).strip() for root in source_roots if str(root).strip()]
+    sources = result.get("sources")
+    if not isinstance(sources, list):
+        return []
+    roots: list[str] = []
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        root = str(source.get("source_root") or source.get("source_root_text") or "").strip()
+        if root:
+            roots.append(root)
+    return roots
+
+
+def _readable_source_root(source: str) -> Path | None:
+    path = Path(source).expanduser()
+    if path.is_dir():
+        return path.resolve()
+    if path.is_file():
+        return path.resolve().parent
+    return None
 
 
 def _path_under_any_root(path: Path, roots: list[Path]) -> bool:
