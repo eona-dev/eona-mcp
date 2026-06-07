@@ -10,36 +10,32 @@ Each project provides its own photo workspace, metadata index, and MCP tool name
 
 ---
 
-## Install
-
-```bash
-curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
-```
-
-When bootstrap succeeds, configure your MCP client to use:
-
-```text
-~/.eona/eona-mcp/eona-mcp-stdio.sh
-```
-
----
-
 ## Quick Start
 
 Recommended: attach photo folders during bootstrap, before adding EONA MCP to
 your MCP client. Indexing can take time, and bootstrap can show progress in a
 normal terminal.
 
+Hosted bootstrap:
+
 ```bash
 export EONA_SOURCES_JSON='["/path/to/photos"]'
-
 curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
 ```
 
-The default project is:
+Repository checkout:
+
+```bash
+git clone https://github.com/isemptyc/eona-mcp.git
+cd eona-mcp
+export EONA_SOURCES_JSON='["/path/to/photos"]'
+bash bootstrap/bootstrap.sh
+```
+
+When bootstrap succeeds, configure your MCP client to use:
 
 ```text
-my-photos
+~/.eona/eona-mcp/eona-mcp-stdio.sh
 ```
 
 ---
@@ -51,10 +47,7 @@ Bootstrap does not modify existing project sources by default.
 To intentionally append or refresh sources:
 
 ```bash
-export EONA_SOURCES_JSON='["/path/to/photos"]'
 export EONA_FORCE_APPEND=1
-
-curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
 ```
 
 ---
@@ -62,9 +55,15 @@ curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
 ## Docker HTTP MCP
 
 Use Docker when you want HTTP MCP containers instead of the local stdio launcher.
-The Docker image runs EONA MCP and EONA CLI in an isolated, prebuilt
-environment: no random runtime downloads, no auto-upgrades, and a preserved
+The Docker image runs EONA MCP and EONA CLI in an isolated, prebuilt, and a preserved
 running environment for the lifetime of the container.
+
+Start from the same checkout:
+
+```bash
+git clone https://github.com/isemptyc/eona-mcp.git
+cd eona-mcp
+```
 
 Prepare local environment settings:
 
@@ -85,12 +84,6 @@ Start the default project:
 docker compose up
 ```
 
-The default HTTP endpoint is:
-
-```text
-http://localhost:8711/mcp
-```
-
 To run the optional second project, set the `EONA_PROJECT_B_*` values in `.env`
 and start with:
 
@@ -98,68 +91,50 @@ and start with:
 docker compose --profile project-b up
 ```
 
+The default HTTP endpoint is:
+
+```text
+http://localhost:8711/mcp
+```
+
+Configure your MCP client with the bearer token from `.env`:
+
+```text
+Authorization: Bearer change-me-project-a
+```
+
+For the optional second project, use the `EONA_PROJECT_B_BEARER_TOKEN` value
+instead:
+
+```text
+Authorization: Bearer change-me-project-b
+```
+
 Docker MCP containers are standalone and ephemeral. They do not share a
 workspace volume; each container stores its index under its own `/workspace`.
 Removing a container removes its indexed data. Photo folders are mounted
 read-only at `/photos`.
 
-HTTP MCP startup prepares location data before listening by default. After
-indexing, EONA MCP asks EONA CLI for the indexed countries, then warms
-`location.admin_path` per country so agent queries do not trigger long Cadis
-preparation work. Set `EONA_MCP_HTTP_PREPARE_LOCATION=0` to skip this warm-up.
-
-HTTP fetch publishes requested originals as temporary assets under
-`/workspace/assets`, with URLs such as
-`http://localhost:8711/assets/<opaque-name>.jpg`. Stdio fetch uses the same
-opaque asset boundary and returns `file://` URLs under the EONA MCP workspace
-assets directory. Asset URLs are minted only by authenticated fetch calls and do
-not expose source file paths.
-
 ---
 
 ## MCP Tools
 
-A project named:
-
-```text
-my-photos
-```
-
 exposes:
 
 ```text
-eona-mcp.my-photos.append
-eona-mcp.my-photos.list
-eona-mcp.my-photos.refresh
-eona-mcp.my-photos.reset
-eona-mcp.my-photos.query
-eona-mcp.my-photos.fetch
-```
-
-The query tool executes an EONA MCP Query v1 plan against the project's metadata index.
-The fetch tool retrieves indexed photos by `photo.id`; clients should not pass
-file paths. HTTP MCP returns `http://` asset URLs; stdio MCP returns `file://`
-asset URLs.
-
-Agents should read:
-
-```text
-eona://agent/how-to-query
-eona://agent/how-to-fetch-photos
-```
-
-before issuing queries or fetching photos. These resources are backed by:
-
-```text
-agent/EONA-MCP-Query-v1.md
-agent/EONA-MCP-Fetch-Photos.md
+eona-mcp.<project>.append
+eona-mcp.<project>.list
+eona-mcp.<project>.refresh
+eona-mcp.<project>.reset
+eona-mcp.<project>.query
+eona-mcp.<project>.fetch
 ```
 
 ---
 
 ## EONA CLI
 
-`eona-cli` is the local EONA runtime used by `eona-mcp` to index photo folders, maintain project sessions, and execute EONA MCP Query v1 plans.
+`eona-cli` is the local EONA runtime used by `eona-mcp` to index photo folders, maintain project sessions, and execute EONA Query v1 plans.
 
 Repository:
 
