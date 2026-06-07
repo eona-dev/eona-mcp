@@ -139,7 +139,20 @@ def _handler_class(*, tools: EonaMcpTools, config: EonaMcpHttpConfig) -> type[Ba
             self._send_json(HTTPStatus.OK, response, protocol_version=protocol_version)
 
         def do_GET(self) -> None:  # noqa: N802 - stdlib handler method name.
-            if self._serve_asset_if_matched():
+            if self._serve_asset_if_matched(include_body=True):
+                return
+            if not self._request_allowed():
+                return
+            if not self._path_matches():
+                self._send_json(HTTPStatus.NOT_FOUND, _jsonrpc_error(None, -32004, "MCP endpoint not found."))
+                return
+            self.send_response(HTTPStatus.METHOD_NOT_ALLOWED)
+            self.send_header("Allow", "POST")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def do_HEAD(self) -> None:  # noqa: N802 - stdlib handler method name.
+            if self._serve_asset_if_matched(include_body=False):
                 return
             if not self._request_allowed():
                 return
@@ -162,7 +175,7 @@ def _handler_class(*, tools: EonaMcpTools, config: EonaMcpHttpConfig) -> type[Ba
             self.send_header("Content-Length", "0")
             self.end_headers()
 
-        def _serve_asset_if_matched(self) -> bool:
+        def _serve_asset_if_matched(self, *, include_body: bool) -> bool:
             request_path = urlsplit(self.path).path
             if not request_path.startswith("/assets/"):
                 return False
@@ -188,7 +201,8 @@ def _handler_class(*, tools: EonaMcpTools, config: EonaMcpHttpConfig) -> type[Ba
             self.send_header("Content-Type", mimetypes.guess_type(str(asset_path))[0] or "application/octet-stream")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(body)
+            if include_body:
+                self.wfile.write(body)
             return True
 
         def _path_matches(self) -> bool:
