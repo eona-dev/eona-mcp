@@ -6,5 +6,6 @@ if [[ -f "${ROOT_DIR}/eona-mcp.env" ]]; then
   source "${ROOT_DIR}/eona-mcp.env"
 fi
 export EONA_RELEASE_ROOT="${EONA_RELEASE_ROOT:-${ROOT_DIR}}"
+export EONA_MCP_INSTALL_ROOT="${EONA_MCP_INSTALL_ROOT:-${ROOT_DIR}}"
 export PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
 exec python3 -m eona_mcp.server "$@"

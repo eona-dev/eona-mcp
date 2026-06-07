@@ -12,6 +12,8 @@ services:
       EONA_SESSION_ID: ${EONA_PROJECT_A_SESSION_ID:-${EONA_PROJECT_A_ID:-project-a}}
       EONA_SOURCES_JSON: '["/photos"]'
       EONA_MCP_WORKSPACE: /workspace
+      EONA_QUERY_RESOURCE_PATH: /opt/eona/eona-mcp/agent/EONA-MCP-Query-v1.md
+      EONA_FETCH_RESOURCE_PATH: /opt/eona/eona-mcp/agent/EONA-MCP-Fetch-Photos.md
       EONA_CADIS_DATASET_URL: http://cadis-datasets/cadis/dataset/releases
       EONA_MCP_HTTP_HOST: 0.0.0.0
       EONA_MCP_HTTP_PORT: "8711"
@@ -41,6 +43,8 @@ services:
       EONA_SESSION_ID: ${EONA_PROJECT_B_SESSION_ID:-${EONA_PROJECT_B_ID:-project-b}}
       EONA_SOURCES_JSON: '["/photos"]'
       EONA_MCP_WORKSPACE: /workspace
+      EONA_QUERY_RESOURCE_PATH: /opt/eona/eona-mcp/agent/EONA-MCP-Query-v1.md
+      EONA_FETCH_RESOURCE_PATH: /opt/eona/eona-mcp/agent/EONA-MCP-Fetch-Photos.md
       EONA_CADIS_DATASET_URL: http://cadis-datasets/cadis/dataset/releases
       EONA_MCP_HTTP_HOST: 0.0.0.0
       EONA_MCP_HTTP_PORT: "8712"

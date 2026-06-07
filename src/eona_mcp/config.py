@@ -114,10 +114,29 @@ def _optional_path(value: str | None, *, default: Path | None = None) -> Path | 
 
 
 def _resource_path(values: Mapping[str, str], *, env_key: str, default_path: Path) -> Path:
-    path = Path(values.get(env_key, str(default_path)))
-    if path.is_absolute():
+    raw_value = str(values.get(env_key, "")).strip()
+    path = Path(raw_value) if raw_value else default_path
+    if path.is_absolute() and path.is_file():
         return path
-    release_root = str(values.get("EONA_RELEASE_ROOT", "")).strip()
-    if release_root:
-        return Path(release_root) / path
+    if raw_value and path.is_absolute():
+        fallback = _packaged_resource_path(values, default_path)
+        if fallback.is_file():
+            return fallback
+        return path
+    for root_key in ("EONA_MCP_INSTALL_ROOT", "EONA_RELEASE_ROOT"):
+        release_root = str(values.get(root_key, "")).strip()
+        if release_root:
+            candidate = Path(release_root) / path
+            if candidate.is_file():
+                return candidate
+    packaged = _packaged_resource_path(values, path)
+    if packaged.is_file():
+        return packaged
     return path
+
+
+def _packaged_resource_path(values: Mapping[str, str], path: Path) -> Path:
+    mcp_root = str(values.get("EONA_MCP_INSTALL_ROOT", "")).strip()
+    if mcp_root:
+        return Path(mcp_root) / path
+    return Path(__file__).resolve().parents[2] / path
