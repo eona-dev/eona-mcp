@@ -8,10 +8,11 @@ import os
 import shlex
 import sys
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 from .cli import EonaCliInvocationError, EonaCliRunner
 from .config import EonaMcpConfigError, load_config
+from .startup import run_startup_location_warmup
 
 
 DEFAULT_SESSION_ID = "default_session"
@@ -169,6 +170,8 @@ def prepare_project(
         }
         payload["current_sources"] = current_sources
         _log(payload)
+        if current_sources:
+            _maybe_run_location_warmup(config, runner)
         return payload
     if marker is not None and marker.is_file() and not force_append:
         current_sources = _existing_session_sources(runner)
@@ -187,6 +190,7 @@ def prepare_project(
         }
         payload["current_sources"] = current_sources
         _log(payload)
+        _maybe_run_location_warmup(config, runner)
         return payload
     confirmation = _confirm_existing_sources(
         config=config,
@@ -201,6 +205,7 @@ def prepare_project(
             _write_prepare_marker(marker, confirmation)
             confirmation["skip_marker"] = str(marker)
         _log(confirmation)
+        _maybe_run_location_warmup(config, runner)
         return confirmation
     try:
         result = runner.add(
@@ -238,7 +243,16 @@ def prepare_project(
         )
         payload["marker"] = str(marker)
     _log(payload)
+    payload["location_warmup"] = _maybe_run_location_warmup(config, runner)
     return payload
+
+
+def _maybe_run_location_warmup(config, runner: EonaCliRunner) -> dict[str, Any] | None:
+    if not config.startup_prepare_location:
+        return None
+    if str(os.environ.get("EONA_MCP_PREPARE_OUTPUT", "")).strip().lower() != "json":
+        print("\n[LOCATION PREPARATION]\n", file=sys.stderr, flush=True)
+    return run_startup_location_warmup(config, runner=runner)
 
 
 def _confirm_existing_sources(
