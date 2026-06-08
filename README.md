@@ -26,7 +26,7 @@ curl -sSL https://mcp.eona.dev/bootstrap.sh | sh
 Repository checkout:
 
 ```bash
-git clone https://github.com/isemptyc/eona-mcp.git
+git clone https://github.com/eona-dev/eona-mcp.git
 cd eona-mcp
 export EONA_SOURCES_JSON='["/path/to/photos"]'
 bash bootstrap/bootstrap.sh
@@ -61,7 +61,7 @@ running environment for the lifetime of the container.
 Start from the same checkout:
 
 ```bash
-git clone https://github.com/isemptyc/eona-mcp.git
+git clone https://github.com/eona-dev/eona-mcp.git
 cd eona-mcp
 ```
 
@@ -147,7 +147,7 @@ contract.
 Repository:
 
 ```text
-https://github.com/isemptyc/eona-cli
+https://github.com/eona-dev/eona-cli
 ```
 
 `eona-cli` is distributed separately under GPL-3.0. `eona-mcp` does not bundle

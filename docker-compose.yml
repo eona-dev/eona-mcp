@@ -1,10 +1,10 @@
 services:
   cadis-datasets:
-    image: ${EONA_CADIS_DATASETS_IMAGE:-ghcr.io/isemptyc/eona-cadis-datasets:latest}
+    image: ${EONA_CADIS_DATASETS_IMAGE:-ghcr.io/eona-dev/cadis-dataset-cdn:latest}
     restart: unless-stopped
 
   eona-project-a:
-    image: ${EONA_MCP_IMAGE:-ghcr.io/isemptyc/eona-mcp:latest}
+    image: ${EONA_MCP_IMAGE:-ghcr.io/eona-dev/eona-mcp:latest}
     command: ["/opt/eona/eona-mcp/bin/eona-mcp-http"]
     environment:
       EONA_PROJECT_ID: ${EONA_PROJECT_A_ID:-project-a}
@@ -34,7 +34,7 @@ services:
       - cadis-datasets
 
   eona-project-b:
-    image: ${EONA_MCP_IMAGE:-ghcr.io/isemptyc/eona-mcp:latest}
+    image: ${EONA_MCP_IMAGE:-ghcr.io/eona-dev/eona-mcp:latest}
     command: ["/opt/eona/eona-mcp/bin/eona-mcp-http"]
     profiles: ["project-b"]
     environment:
