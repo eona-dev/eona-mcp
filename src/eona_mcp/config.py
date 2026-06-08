@@ -27,6 +27,7 @@ class EonaMcpConfig:
     eona_executable: str = "eona"
     startup_add: bool = True
     startup_required: bool = True
+    startup_prepare_location: bool = True
     project_tools_enabled: bool = False
     query_resource_path: Path = DEFAULT_QUERY_RESOURCE_PATH
     fetch_resource_path: Path = DEFAULT_FETCH_RESOURCE_PATH
@@ -55,6 +56,7 @@ def load_config(env: Mapping[str, str] | None = None) -> EonaMcpConfig:
         eona_executable=str(values.get("EONA_CLI") or (cli_root / "bin" / "eona")),
         startup_add=_parse_bool(values.get("EONA_STARTUP_ADD", "1")),
         startup_required=_parse_bool(values.get("EONA_STARTUP_REQUIRED", "1")),
+        startup_prepare_location=_parse_bool(_first_env_value(values, "EONA_MCP_PREPARE_LOCATION", "EONA_MCP_HTTP_PREPARE_LOCATION", default="1")),
         project_tools_enabled=True,
         query_resource_path=_resource_path(
             values,
@@ -99,6 +101,14 @@ def _parse_sources(raw_value: str | None) -> tuple[str, ...]:
 
 def _parse_bool(value: str) -> bool:
     return str(value).strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _first_env_value(values: Mapping[str, str], *keys: str, default: str) -> str:
+    for key in keys:
+        value = values.get(key)
+        if value is not None and str(value).strip():
+            return str(value)
+    return default
 
 
 def _optional_text(value: str | None) -> str | None:

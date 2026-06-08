@@ -6,7 +6,7 @@ import sys
 from typing import Any, TextIO
 
 from .config import EonaMcpConfigError, load_config
-from .startup import run_startup_add
+from .startup import run_startup_add, run_startup_location_warmup
 from .tools import EonaMcpTools
 
 JSONRPC_VERSION = "2.0"
@@ -18,6 +18,8 @@ def main() -> int:
     try:
         config = load_config()
         run_startup_add(config)
+        if config.startup_prepare_location:
+            run_startup_location_warmup(config)
     except (EonaMcpConfigError, RuntimeError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True), file=sys.stderr)
         return 1
