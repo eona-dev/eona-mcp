@@ -142,12 +142,12 @@ def _log_startup_event(payload: dict[str, Any]) -> None:
 
 
 def _log_location_warmup_human_done(country: str) -> None:
-    print(f"Location enrichment: {country}... done", file=sys.stderr, flush=True)
+    print(f"Location metadata: {country}... ready", file=sys.stderr, flush=True)
 
 
 def _log_location_warmup_human_failure(country: str, payload: dict[str, Any]) -> None:
     summary = str(payload.get("summary") or payload.get("stderr") or "failed").strip()
-    print(f"Location enrichment: {country}... failed", file=sys.stderr, flush=True)
+    print(f"Location metadata: {country}... failed", file=sys.stderr, flush=True)
     if summary:
         print(f"[eona-mcp bootstrap] {summary}", file=sys.stderr, flush=True)
 
