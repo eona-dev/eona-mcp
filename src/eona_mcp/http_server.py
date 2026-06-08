@@ -36,7 +36,8 @@ def main() -> int:
         http_config = load_http_config()
         run_startup_add(mcp_config)
         if mcp_config.startup_prepare_location:
-            run_startup_location_warmup(mcp_config)
+            print("\n[LOCATION PREPARATION]\n", file=sys.stderr, flush=True)
+            run_startup_location_warmup(mcp_config, human_output=True)
     except (EonaMcpConfigError, RuntimeError, ValueError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, sort_keys=True), file=sys.stderr)
         return 1

@@ -132,6 +132,8 @@ def run_startup_location_warmup(
     }
     if not human_output:
         _log_startup_event(summary)
+    elif countries:
+        print("", file=sys.stderr, flush=True)
     return summary
 
 
