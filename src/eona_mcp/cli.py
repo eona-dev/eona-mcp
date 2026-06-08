@@ -177,7 +177,17 @@ def _run_capturing_stdout_and_streaming_stderr(command: list[str], *, stdin: str
 
     stderr_thread = Thread(target=drain_stderr, daemon=True)
     stderr_thread.start()
-    stdout, _ = process.communicate(stdin)
+    if stdin is not None:
+        assert process.stdin is not None
+        try:
+            process.stdin.write(stdin)
+        except BrokenPipeError:
+            pass
+        finally:
+            process.stdin.close()
+    assert process.stdout is not None
+    stdout = process.stdout.read()
+    process.wait()
     stderr_thread.join()
     return process.returncode, stdout or "", "".join(stderr_chunks)
 
