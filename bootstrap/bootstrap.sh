@@ -511,9 +511,11 @@ else
   prepare_mcp_project "$MCP_INSTALL_DIR" "$FAMILY_ROOT" "$CLI_INSTALL_DIR" "$WORKSPACE_DIR" "$PROJECT_ID" "$SESSION_ID" "$SOURCES_JSON" "$PROJECT_DESCRIPTION"
 fi
 
-log "Installed EONA MCP to ${MCP_INSTALL_DIR}"
-log "Workspace: ${WORKSPACE_DIR}"
-log "Project: ${PROJECT_ID}/${SESSION_ID}"
-log "Stdio MCP command: ${MCP_INSTALL_DIR}/eona-mcp-stdio.sh"
+cyan="$(human_color 36)"
+reset="$(human_color 0)"
+printf '[eona-mcp bootstrap] Installed EONA MCP to %s%s%s\n' "$cyan" "$(display_path "$MCP_INSTALL_DIR")" "$reset" >&2
+printf '[eona-mcp bootstrap] Workspace: %s%s%s\n' "$cyan" "$(display_path "$WORKSPACE_DIR")" "$reset" >&2
+printf '[eona-mcp bootstrap] Project: %s%s/%s%s\n' "$cyan" "$PROJECT_ID" "$SESSION_ID" "$reset" >&2
+printf '[eona-mcp bootstrap] Stdio MCP command: %s%s%s\n' "$cyan" "$(display_path "${MCP_INSTALL_DIR}/eona-mcp-stdio.sh")" "$reset" >&2
 printf '\n%sbootstrap succeeded%s\n' "$(human_color 32)" "$(human_color 0)" >&2
 printf 'For more details about EONA MCP, please read README.md.\n' >&2

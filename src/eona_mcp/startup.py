@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from typing import Any
 
@@ -142,7 +143,9 @@ def _log_startup_event(payload: dict[str, Any]) -> None:
 
 
 def _log_location_warmup_human_done(country: str) -> None:
-    print(f"Location metadata: {country}... ready", file=sys.stderr, flush=True)
+    green = _human_color("32")
+    reset = _human_color("0")
+    print(f"Location metadata: {country}... {green}ready{reset}", file=sys.stderr, flush=True)
 
 
 def _log_location_warmup_human_failure(country: str, payload: dict[str, Any]) -> None:
@@ -150,6 +153,12 @@ def _log_location_warmup_human_failure(country: str, payload: dict[str, Any]) ->
     print(f"Location metadata: {country}... failed", file=sys.stderr, flush=True)
     if summary:
         print(f"[eona-mcp bootstrap] {summary}", file=sys.stderr, flush=True)
+
+
+def _human_color(code: str) -> str:
+    if sys.stderr.isatty() and not os.environ.get("NO_COLOR"):
+        return f"\033[{code}m"
+    return ""
 
 
 def _startup_cli_failure(operation: str, exc: EonaCliInvocationError) -> dict[str, Any]:
