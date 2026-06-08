@@ -252,7 +252,7 @@ def _maybe_run_location_warmup(config, runner: EonaCliRunner) -> dict[str, Any] 
         return None
     if str(os.environ.get("EONA_MCP_PREPARE_OUTPUT", "")).strip().lower() != "json":
         print("\n[LOCATION PREPARATION]\n", file=sys.stderr, flush=True)
-    return run_startup_location_warmup(config, runner=runner)
+    return run_startup_location_warmup(config, runner=runner, human_output=True)
 
 
 def _confirm_existing_sources(

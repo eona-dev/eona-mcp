@@ -47,13 +47,21 @@ def run_startup_add(config: EonaMcpConfig, runner: EonaCliRunner | None = None) 
     return result
 
 
-def run_startup_location_warmup(config: EonaMcpConfig, runner: EonaCliRunner | None = None) -> dict[str, Any]:
+def run_startup_location_warmup(
+    config: EonaMcpConfig,
+    runner: EonaCliRunner | None = None,
+    *,
+    human_output: bool = False,
+) -> dict[str, Any]:
     resolved_runner = runner or EonaCliRunner(config)
     try:
-        country_result = resolved_runner.query(plan=_country_discovery_plan(), stream_stderr=True)
+        country_result = resolved_runner.query(plan=_country_discovery_plan(), stream_stderr=not human_output)
     except EonaCliInvocationError as exc:
         failure = _startup_cli_failure("startup_location_warmup", exc)
-        _log_startup_event(failure)
+        if human_output:
+            _log_location_warmup_human_failure("Location enrichment", failure)
+        else:
+            _log_startup_event(failure)
         if config.startup_required:
             raise
         return failure
@@ -61,19 +69,20 @@ def run_startup_location_warmup(config: EonaMcpConfig, runner: EonaCliRunner | N
     countries = _countries_from_query_result(country_result)
     warmed: list[dict[str, Any]] = []
     failed: list[dict[str, Any]] = []
-    _log_startup_event(
-        {
-            "ok": True,
-            "operation": "startup_location_warmup_countries",
-            "project_id": config.project_id,
-            "session_id": config.session_id,
-            "countries": countries,
-            "country_count": len(countries),
-        }
-    )
+    if not human_output:
+        _log_startup_event(
+            {
+                "ok": True,
+                "operation": "startup_location_warmup_countries",
+                "project_id": config.project_id,
+                "session_id": config.session_id,
+                "countries": countries,
+                "country_count": len(countries),
+            }
+        )
     for country in countries:
         try:
-            result = resolved_runner.query(plan=_admin_location_warmup_plan(country), stream_stderr=True)
+            result = resolved_runner.query(plan=_admin_location_warmup_plan(country), stream_stderr=not human_output)
         except EonaCliInvocationError as exc:
             item = {
                 "country": country,
@@ -82,30 +91,36 @@ def run_startup_location_warmup(config: EonaMcpConfig, runner: EonaCliRunner | N
                 "stderr": exc.stderr,
             }
             failed.append(item)
-            _log_startup_event(
-                {
-                    "ok": False,
-                    "operation": "startup_location_warmup_country",
-                    "project_id": config.project_id,
-                    "session_id": config.session_id,
-                    **item,
-                }
-            )
+            if human_output:
+                _log_location_warmup_human_failure(country, item)
+            else:
+                _log_startup_event(
+                    {
+                        "ok": False,
+                        "operation": "startup_location_warmup_country",
+                        "project_id": config.project_id,
+                        "session_id": config.session_id,
+                        **item,
+                    }
+                )
             if config.startup_required:
                 raise
             continue
         row_count = _query_row_count(result)
         item = {"country": country, "row_count": row_count}
         warmed.append(item)
-        _log_startup_event(
-            {
-                "ok": True,
-                "operation": "startup_location_warmup_country",
-                "project_id": config.project_id,
-                "session_id": config.session_id,
-                **item,
-            }
-        )
+        if human_output:
+            _log_location_warmup_human_done(country)
+        else:
+            _log_startup_event(
+                {
+                    "ok": True,
+                    "operation": "startup_location_warmup_country",
+                    "project_id": config.project_id,
+                    "session_id": config.session_id,
+                    **item,
+                }
+            )
     summary = {
         "ok": not failed,
         "operation": "startup_location_warmup",
@@ -115,12 +130,24 @@ def run_startup_location_warmup(config: EonaMcpConfig, runner: EonaCliRunner | N
         "warmed": warmed,
         "failed": failed,
     }
-    _log_startup_event(summary)
+    if not human_output:
+        _log_startup_event(summary)
     return summary
 
 
 def _log_startup_event(payload: dict[str, Any]) -> None:
     print(json.dumps(payload, sort_keys=True), file=sys.stderr, flush=True)
+
+
+def _log_location_warmup_human_done(country: str) -> None:
+    print(f"Location enrichment: {country}... done", file=sys.stderr, flush=True)
+
+
+def _log_location_warmup_human_failure(country: str, payload: dict[str, Any]) -> None:
+    summary = str(payload.get("summary") or payload.get("stderr") or "failed").strip()
+    print(f"Location enrichment: {country}... failed", file=sys.stderr, flush=True)
+    if summary:
+        print(f"[eona-mcp bootstrap] {summary}", file=sys.stderr, flush=True)
 
 
 def _startup_cli_failure(operation: str, exc: EonaCliInvocationError) -> dict[str, Any]:
