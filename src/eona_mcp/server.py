@@ -52,7 +52,7 @@ def handle_request(tools: EonaMcpTools, request: dict[str, Any]) -> dict[str, An
             {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {"tools": {}, "resources": {}},
-                "serverInfo": {"name": "eona-mcp", "version": "0.1.2"},
+                "serverInfo": {"name": "eona-mcp", "version": "0.1.3"},
             },
         )
     if method == "notifications/initialized":
